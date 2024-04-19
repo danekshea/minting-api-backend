@@ -1,7 +1,9 @@
 const fastify = require("fastify")({ logger: true });
 const cors = require("@fastify/cors");
-import { blockchainData, config as sdkConfig } from "@imtbl/sdk";
-import { v4 as uuidv4 } from "uuid";
+import serverConfig from "./config";
+import { environment } from "./config";
+import { mintByMintingAPI } from "./minting";
+import { verifyToken, decodeToken } from "./utils";
 
 // //Disables CORS altogether
 // fastify.register(cors, {
@@ -15,60 +17,39 @@ fastify.register(cors, {
   allowedHeaders: ["Content-Type", "Authorization"],
 });
 
-// Define a route
-fastify.get("/", (request, reply) => {
-  reply.send({ hello: "world" });
+fastify.post("/mint", async (request, reply) => {
+  const authorizationHeader = request.headers["authorization"];
+
+  if (!authorizationHeader) {
+    reply.status(401).send({ error: "Missing authorization header" });
+    return;
+  }
+
+  const idToken = authorizationHeader.replace("Bearer ", "");
+
+  try {
+    //Verify and decode the IDToken, should throw an error if the signature is invalid
+    await verifyToken(idToken);
+    const decodedToken = await decodeToken(idToken);
+
+    const walletAddress = decodedToken.payload.passport.zkevm_eth_address;
+
+    const uuid = await mintByMintingAPI(serverConfig[environment].collectionAddress, walletAddress);
+
+    // Prepare the response
+    const response = {
+      walletAddress,
+      uuid,
+    };
+
+    // Send the response
+    reply.send(response);
+  } catch (err) {
+    fastify.log.error("Failed to verify ID token:", err);
+    reply.status(401).send({ error: "Invalid ID token" });
+    return; // Stop further execution
+  }
 });
-
-fastify.get("/mint", (request, reply) => {
-  reply.send({ hello: "mint" });
-});
-
-const mintByMintingAPI = async (contractAddress: string): Promise<blockchainData.Types.CreateMintRequestResult> => {
-  //Remember to grant the minting role to the mintingAPIAddress
-  const config: blockchainData.BlockchainDataModuleConfiguration = {
-    baseConfig: new sdkConfig.ImmutableConfiguration({
-      environment: sdkConfig.Environment.SANDBOX,
-    }),
-    overrides: {
-      basePath: API_URL,
-      headers: {
-        "x-immutable-api-key": process.env.IMMUTABLE_API_KEY!,
-      },
-    },
-  };
-
-  const client = new blockchainData.BlockchainData(config);
-
-  const chainName = "imtbl-zkevm-testnet";
-
-  const uuid = uuidv4();
-
-  const response = await client.createMintRequest({
-    chainName,
-    contractAddress,
-    createMintRequestRequest: {
-      assets: [
-        {
-          owner_address: "0x9648d4bf782c02bf140562711ae138e3ad113b8a",
-          reference_id: uuid,
-          //Remove token_id line if you want to batch mint
-          //token_id: "2",
-          metadata: {
-            name: "Homer",
-            description: null,
-            image: "https://raw.githubusercontent.com/danekshea/imx-zkevm-testing-kit/master/data/chessnfts/metadata/homer.gif",
-            animation_url: "https://raw.githubusercontent.com/danekshea/imx-zkevm-testing-kit/master/data/chessnfts/metadata/homer2.gif",
-            youtube_url: null,
-            attributes: [],
-          },
-        },
-      ],
-    },
-  });
-  console.log(`Mint request sent with UUID: ${uuid}`);
-  return response;
-};
 
 // Start the server
 const start = async () => {
