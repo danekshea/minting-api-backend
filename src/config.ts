@@ -9,12 +9,22 @@ const serverConfig = {
   [config.Environment.SANDBOX]: {
     API_URL: "https://api.sandbox.immutable.com",
     API_KEY: process.env.SANDBOX_IMMUTABLE_API_KEY,
+    chainName: "imtbl-zkevm-testnet",
     collectionAddress: "0x88b87272649b3495d99b1702f358286b19f8c3da",
+    DATABASE_URL: process.env.SANDBOX_DATABASE_URL,
+    mintSuccessPollingFrequency: 1000,
+    mintSuccessPollingRetries: 15,
+    mintRequestURL: (chainName: string, collectionAddress: string, referenceId: string) => `https://api.sandbox.immutable.com/v1/chains/${chainName}/collections/${collectionAddress}/nfts/mint-requests/${referenceId}`,
   },
   [config.Environment.PRODUCTION]: {
     API_URL: "https://api.immutable.com",
     API_KEY: process.env.MAINNET_IMMUTABLE_API_KEY,
+    chainName: "imtbl-zkevm-mainnet",
     collectionAddress: "0x88b87272649b3495d99b1702f358286b19f8c3da",
+    DATABASE_URL: process.env.MAINNET_DATABASE_URL,
+    mintSuccessPollingFrequency: 1000,
+    mintSuccessPollingRetries: 15,
+    mintRequestURL: (chainName: string, collectionAddress: string, referenceId: string) => `https://api.immutable.com/v1/chains/${chainName}/collections/${collectionAddress}/nfts/mint-requests/${referenceId}`,
   },
 };
 
