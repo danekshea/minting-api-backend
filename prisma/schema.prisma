@@ -1,0 +1,18 @@
+// schema.prisma
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model AllowedAddress {
+  address   String  @id
+  quantity  Int    @default(0)
+  isLocked  Boolean @default(false)
+  hasMinted Boolean @default(false)
+  uuid      String?
+}

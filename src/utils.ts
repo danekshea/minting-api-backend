@@ -3,6 +3,9 @@ const jwkToPem = require("jwk-to-pem");
 const axios = require("axios");
 import { promisify } from "util";
 import { IMX_JWT_KEY_URL } from "./config";
+import { createVerify } from "crypto";
+const SnsValidator = require("sns-validator");
+const validator = new SnsValidator();
 
 export async function verifyToken(IDtoken: string): Promise<void> {
   try {
@@ -35,6 +38,20 @@ export async function decodeToken(IDtoken: string): Promise<PassportIDToken> {
   const decoded: PassportIDToken = jwt.decode(IDtoken, { complete: true });
   //console.log("Decoded JWT:", decoded);
   return decoded;
+}
+
+export async function verifySignature(webhookPayload: string): Promise<boolean> {
+  return new Promise((resolve, reject) => {
+    validator.validate(webhookPayload, (err) => {
+      if (err) {
+        console.error("Signature validation failed:", err);
+        reject(false);
+      } else {
+        console.log("Signature verification successful");
+        resolve(true);
+      }
+    });
+  });
 }
 
 // async function main() {

@@ -15,6 +15,8 @@ const serverConfig = {
     mintSuccessPollingFrequency: 1000,
     mintSuccessPollingRetries: 15,
     mintRequestURL: (chainName: string, collectionAddress: string, referenceId: string) => `https://api.sandbox.immutable.com/v1/chains/${chainName}/collections/${collectionAddress}/nfts/mint-requests/${referenceId}`,
+    WEBHOOK_URL: process.env.SANDBOX_WEBHOOK_URL,
+    allowedTopicArn: "arn:aws:sns:us-east-2:783421985614:*",
   },
   [config.Environment.PRODUCTION]: {
     API_URL: "https://api.immutable.com",
@@ -25,6 +27,8 @@ const serverConfig = {
     mintSuccessPollingFrequency: 1000,
     mintSuccessPollingRetries: 15,
     mintRequestURL: (chainName: string, collectionAddress: string, referenceId: string) => `https://api.immutable.com/v1/chains/${chainName}/collections/${collectionAddress}/nfts/mint-requests/${referenceId}`,
+    WEBHOOK_URL: process.env.MAINNET_WEBHOOK_URL,
+    allowedTopicArn: "arn:aws:sns:us-east-2:362750628221:*",
   },
 };
 
