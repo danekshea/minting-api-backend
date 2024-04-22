@@ -8,23 +8,24 @@ This project is a backend API for minting. It uses Prisma ORM with sqlite3.
    ```
    npm i
    ```
-2. Copy the example environment file and fill it with your API key and the webhook endpoint:
+2. Copy the example environment file and fill it with your API key, and DB path(should be `file:./allowList.db`):
    ```
    cp .env.example .env
    ```
-3. Run the migrations:
+   3. Make sure to configure `src/config.ts` with your contract address after deploying the contract on hub.immutable.com
+3. Run the DB migrations:
    ```
    npx prisma migrate dev
    ```
 4. Load your database, https://sqlitebrowser.org/ is great for this. You can also write a script that uses the Prisma client to load the database. Make sure you have your address allowlisted, and quantity is 1, isLocked is 0, hasMinted is 0.
 
-   5.Run the development server:
+   6.Run the development server:
 
    ```
    npm start
    ```
 
-   6. Create your webhook at https://hub.immutable.com/, use localtunnel for testing webhooks locally:
+   7. Create your webhook at https://hub.immutable.com/, use localtunnel for testing webhooks locally:
 
    ```
    npx localtunnel --port 3000
