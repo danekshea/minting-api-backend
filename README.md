@@ -1,21 +1,34 @@
-# Minting API backend for free mints
+# Minting API Backend for Free Mints
 
-## Instructions
+This project is a backend API for minting. It uses Prisma ORM with sqlite3.
 
-- npm i
-- cp .env.example .env
-- fill in .env with the API key and the webhook endpoint
-- npm run dev
-- use localtunnel for tesing webhooks locally
-  npx localtunnel --port 3000
+## Setup Instructions
 
-## TODO
+1. Install the dependencies:
+   ```
+   npm i
+   ```
+2. Copy the example environment file and fill it with your API key and the webhook endpoint:
+   ```
+   cp .env.example .env
+   ```
+3. Run the development server:
+   ```
+   npm start
+   ```
+4. Use localtunnel for testing webhooks locally:
+   ```
+   npx localtunnel --port 3000
+   ```
 
-- [ ] Add a type for the JSON web token
+## To-Do List
+
+- [ ] Add a type for the JSON web token.
 - [ ] Generally type more things like the mint requests etc.
 - [ ] Potentially add more variables to the allowlist like expirations etc.
-- [ ] Consider adding batching functions, will need ways to batch mint requests together but also a way of checking a UUID not for a single mint but several
+- [ ] Consider adding batching functions. This will require ways to batch mint requests together, but also a way of checking a UUID not for a single mint but several.
 
-## Stack
+## Tech Stack
 
--Prisma ORM with sqlite3
+- Prisma ORM
+- sqlite3
