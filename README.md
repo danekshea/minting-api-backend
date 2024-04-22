@@ -17,14 +17,20 @@ This project is a backend API for minting. It uses Prisma ORM with sqlite3.
    npx prisma migrate dev
    ```
 4. Load your database, https://sqlitebrowser.org/ is great for this. You can also write a script that uses the Prisma client to load the database. Make sure you have your address allowlisted, and quantity is 1, isLocked is 0, hasMinted is 0.
-5. Run the development server:
+
+   5.Run the development server:
+
    ```
    npm start
    ```
-6. Use localtunnel for testing webhooks locally:
+
+   6. Create your webhook at https://hub.immutable.com/, use localtunnel for testing webhooks locally:
+
    ```
    npx localtunnel --port 3000
    ```
+
+   Use the above URL for the webhook endpoint with the path `/webhook`. For example: `https://ten-rooms-vanish.loca.lt/webhook`.
 
 ## To-Do List
 
