@@ -3,11 +3,13 @@ const cors = require("@fastify/cors");
 import { FastifyReply, FastifyRequest } from "fastify";
 import serverConfig from "./config";
 import { environment } from "./config";
-import { mintByMintingAPI, mintStatusSucceeded } from "./minting";
-import { verifyToken, decodeToken, verifySignature } from "./utils";
-import { isAllowlisted, lockAddress, markAddressAsMinted, unlockAddress } from "./database";
+import { mintByMintingAPI } from "./minting";
+import { verifyToken, decodeToken, verifySNSSignature } from "./utils";
+import { isAllowlisted, lockUUID, markUUIDMinted, setUUID, unlockUUID } from "./database";
 import { PrismaClient } from "@prisma/client";
 import axios from "axios";
+
+const prisma = new PrismaClient();
 
 // //Disables CORS altogether
 // fastify.register(cors, {
@@ -43,10 +45,10 @@ fastify.post("/mint", async (request: FastifyRequest, reply: FastifyReply) => {
       // Start a database transaction
       await prisma.$transaction(async (tx) => {
         // Check if the wallet address is allowed to mint
-        const isAllowed = await isAllowlisted(walletAddress, tx);
-        if (!isAllowed) {
-          console.log("Wallet address not allowed to mint");
-          reply.status(403).send({ error: "Wallet address not allowed to mint" });
+        const allowlistResult = await isAllowlisted(walletAddress, tx);
+        if (!allowlistResult.isAllowed) {
+          console.log(allowlistResult.reason);
+          reply.status(403).send({ error: `${allowlistResult.reason}` });
           return;
         }
 
@@ -54,8 +56,10 @@ fastify.post("/mint", async (request: FastifyRequest, reply: FastifyReply) => {
         console.log("Initiating mint request");
         const uuid = await mintByMintingAPI(serverConfig[environment].collectionAddress, walletAddress);
 
-        // Lock the row by updating the `isLocked` field
-        await lockAddress(walletAddress, uuid, tx);
+        // Lock the row by updating the `isLocked` field using UUID
+        console.log("Locking wallet address by UUID");
+        await setUUID(walletAddress, uuid, tx);
+        await lockUUID(uuid, tx);
 
         // Prepare the response
         const response = {
@@ -87,7 +91,7 @@ fastify.post("/webhook", async (request, reply) => {
 
     if (TopicArn.startsWith(allowedTopicArnPrefix)) {
       try {
-        const isValid = await verifySignature(request.body);
+        const isValid = await verifySNSSignature(request.body);
 
         if (isValid) {
           const response = await axios.get(SubscribeURL);
@@ -106,6 +110,47 @@ fastify.post("/webhook", async (request, reply) => {
       console.warn("Received subscription confirmation from an unknown TopicArn:", TopicArn);
     }
 
+    reply.send({ status: "ok" });
+  }
+
+  if (Type === "Notification") {
+    try {
+      const isValid = await verifySNSSignature(request.body);
+      if (isValid) {
+        const message = JSON.parse(Message);
+        const { event_name } = message;
+        const { reference_id, status, owner_address } = message.data;
+
+        if (event_name === "imtbl_zkevm_mint_request_updated") {
+          //log all the above values
+          console.log("Received notification:", message);
+          console.log("Reference ID:", reference_id);
+          console.log("Status:", status);
+          console.log("Owner address:", owner_address);
+
+          if (status === "succeeded") {
+            console.log("Mint request succeeded:", reference_id);
+            await prisma.$transaction(async (tx) => {
+              await markUUIDMinted(reference_id, tx);
+              await unlockUUID(reference_id, tx);
+            });
+          } else if (status === "pending") {
+            console.log("Mint request pending:", reference_id);
+          } else if (status === "failed") {
+            console.log("Mint request failed:", reference_id);
+            await prisma.$transaction(async (tx) => {
+              await unlockUUID(reference_id, tx);
+            });
+          }
+        } else {
+          console.log("Received notification for an unknown event:", event_name);
+        }
+      } else {
+        console.error("Invalid signature. Notification denied.");
+      }
+    } catch (error) {
+      console.error("Error processing notification:", error);
+    }
     reply.send({ status: "ok" });
   }
 });

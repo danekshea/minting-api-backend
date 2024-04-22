@@ -6,6 +6,8 @@
 - cp .env.example .env
 - fill in .env with the API key and the webhook endpoint
 - npm run dev
+- use localtunnel for tesing webhooks locally
+  npx localtunnel --port 3000
 
 ## TODO
 

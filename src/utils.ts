@@ -40,7 +40,7 @@ export async function decodeToken(IDtoken: string): Promise<PassportIDToken> {
   return decoded;
 }
 
-export async function verifySignature(webhookPayload: string): Promise<boolean> {
+export async function verifySNSSignature(webhookPayload: string): Promise<boolean> {
   return new Promise((resolve, reject) => {
     validator.validate(webhookPayload, (err) => {
       if (err) {
