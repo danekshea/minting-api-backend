@@ -13,7 +13,7 @@ This project is a backend API for minting. It uses Prisma ORM with sqlite3.
    cp .env.example .env
    ```
 3. Make sure to configure `src/config.ts` with your collection address after deploying the contract on hub.immutable.com
-4. Populate your metadata in `tokens/metadata` with the format of filename being {tokenid} and the metadata format following this[https://docs.immutable.com/docs/zkEVM/products/minting/metadata/format] format. There's already examples in the folder for a project called copypasta.
+4. Populate your metadata in `tokens/metadata` with the format of filename being {tokenid} and the metadata format following [this](https://docs.immutable.com/docs/zkEVM/products/minting/metadata/format) format. There's already examples in the folder for a project called copypasta.
 5. Run the DB migrations:
    ```
    npx prisma migrate dev
