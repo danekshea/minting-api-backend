@@ -22,17 +22,17 @@ This project is a backend API for minting. It uses Prisma ORM with sqlite3.
 
 7. Run the development server:
 
-```
-npm start
-```
+   ```
+   npm start
+   ```
 
-7. Create your webhook at https://hub.immutable.com/, use localtunnel for testing webhooks locally:
+8. Create your webhook at https://hub.immutable.com/, use localtunnel for testing webhooks locally:
 
-```
-npx localtunnel --port 3000
-```
+   ```
+   npx localtunnel --port 3000
+   ```
 
-Use the above URL for the webhook endpoint with the path `/webhook`. For example: `https://ten-rooms-vanish.loca.lt/webhook`.
+   Use the above URL for the webhook endpoint with the path `/webhook`. For example: `https://ten-rooms-vanish.loca.lt/webhook`.
 
 ## Features
 
