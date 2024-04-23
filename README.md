@@ -20,7 +20,7 @@ This project is a backend API for minting. It uses Prisma ORM with sqlite3.
    ```
 6. Load your database, https://sqlitebrowser.org/ is great for this. You can also write a script that uses the Prisma client to load the database. Make sure you have your address allowlisted, and quantity is 1, isLocked is 0, hasMinted is 0.
 
-6.Run the development server:
+7. Run the development server:
 
 ```
 npm start
