@@ -12,27 +12,27 @@ This project is a backend API for minting. It uses Prisma ORM with sqlite3.
    ```
    cp .env.example .env
    ```
-   3. Make sure to configure `src/config.ts` with your collection address after deploying the contract on hub.immutable.com
-   4. Populate your metadata in `tokens/metadata` with the format of filename being {tokenid} and the metadata format following this[https://docs.immutable.com/docs/zkEVM/products/minting/metadata/format] format. There's already examples in the folder for a project called copypasta.
-3. Run the DB migrations:
+3. Make sure to configure `src/config.ts` with your collection address after deploying the contract on hub.immutable.com
+4. Populate your metadata in `tokens/metadata` with the format of filename being {tokenid} and the metadata format following this[https://docs.immutable.com/docs/zkEVM/products/minting/metadata/format] format. There's already examples in the folder for a project called copypasta.
+5. Run the DB migrations:
    ```
    npx prisma migrate dev
    ```
-4. Load your database, https://sqlitebrowser.org/ is great for this. You can also write a script that uses the Prisma client to load the database. Make sure you have your address allowlisted, and quantity is 1, isLocked is 0, hasMinted is 0.
+6. Load your database, https://sqlitebrowser.org/ is great for this. You can also write a script that uses the Prisma client to load the database. Make sure you have your address allowlisted, and quantity is 1, isLocked is 0, hasMinted is 0.
 
-   6.Run the development server:
+6.Run the development server:
 
-   ```
-   npm start
-   ```
+```
+npm start
+```
 
-   7. Create your webhook at https://hub.immutable.com/, use localtunnel for testing webhooks locally:
+7. Create your webhook at https://hub.immutable.com/, use localtunnel for testing webhooks locally:
 
-   ```
-   npx localtunnel --port 3000
-   ```
+```
+npx localtunnel --port 3000
+```
 
-   Use the above URL for the webhook endpoint with the path `/webhook`. For example: `https://ten-rooms-vanish.loca.lt/webhook`.
+Use the above URL for the webhook endpoint with the path `/webhook`. For example: `https://ten-rooms-vanish.loca.lt/webhook`.
 
 ## Features
 
