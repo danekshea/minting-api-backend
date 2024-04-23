@@ -11,8 +11,14 @@ generator client {
 
 model AllowedAddress {
   address   String  @id
-  quantity  Int    @default(0)
+  quantityAllowed  Int    @default(0)
   isLocked  Boolean @default(false)
-  hasMinted Boolean @default(false)
   uuid      String?
+}
+
+model MintedTokens {
+  tokenId   Int    @unique
+  toAddress   String
+  quantity  Int
+  createdAt DateTime @default(now())
 }

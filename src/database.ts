@@ -6,7 +6,7 @@ export async function isAllowlisted(address: string, tx: any): Promise<{ isAllow
   if (!allowedAddress) {
     // Address is not on the list at all
     return { isAllowed: false, reason: "Address is not on the allowlist." };
-  } else if (allowedAddress.hasMinted) {
+  } else if (allowedAddress.quantityAllowed === 0) {
     // Address has already minted
     return { isAllowed: false, reason: "Address has already minted." };
   } else if (allowedAddress.isLocked) {
@@ -36,6 +36,19 @@ export async function markUUIDMinted(uuid: string, tx: any): Promise<void> {
     },
     data: {
       hasMinted: true,
+    },
+  });
+}
+
+export async function decreaseQuantityAllowed(uuid: string, tx: any): Promise<void> {
+  await tx.allowedAddress.update({
+    where: {
+      uuid: uuid,
+    },
+    data: {
+      quantityAllowed: {
+        decrement: 1,
+      },
     },
   });
 }

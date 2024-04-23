@@ -5,7 +5,7 @@ import serverConfig from "./config";
 import { environment } from "./config";
 import { mintByMintingAPI } from "./minting";
 import { verifyToken, decodeToken, verifySNSSignature, getMetadataByTokenId } from "./utils";
-import { isAllowlisted, lockUUID, markUUIDMinted, setUUID, unlockUUID } from "./database";
+import { decreaseQuantityAllowed, isAllowlisted, lockUUID, markUUIDMinted, setUUID, unlockUUID } from "./database";
 import { PrismaClient } from "@prisma/client";
 import axios from "axios";
 
@@ -181,6 +181,7 @@ fastify.post("/webhook", async (request, reply) => {
             await prisma.$transaction(async (tx) => {
               await markUUIDMinted(reference_id, tx);
               await unlockUUID(reference_id, tx);
+              await decreaseQuantityAllowed(reference_id, tx);
             });
           } else if (status === "pending") {
             console.log("Mint request pending:", reference_id);
