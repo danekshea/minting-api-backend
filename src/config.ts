@@ -15,8 +15,9 @@ const serverConfig = {
     mintRequestURL: (chainName: string, collectionAddress: string, referenceId: string) => `https://api.sandbox.immutable.com/v1/chains/${chainName}/collections/${collectionAddress}/nfts/mint-requests/${referenceId}`,
     allowedTopicArn: "arn:aws:sns:us-east-2:783421985614:*",
     metadataDir: "tokens/metadata",
+    startTime: 1629913600,
+    endTime: 1719292800,
     enableAllowList: true,
-    tokenIDstart: 1,
     maxTokenSupply: 10000,
   },
   [config.Environment.PRODUCTION]: {
@@ -29,6 +30,8 @@ const serverConfig = {
     allowedTopicArn: "arn:aws:sns:us-east-2:362750628221:*",
     metadataDir: "tokens/metadata",
     enableAllowList: true,
+    startTime: 1630000000,
+    endTime: 1630000000,
     maxTokenSupply: 10000,
   },
 };

@@ -40,6 +40,13 @@ fastify.post("/mint", async (request: FastifyRequest, reply: FastifyReply) => {
     return;
   }
 
+  //check if mint is between start time and end time
+  const currentTime = Math.floor(Date.now() / 1000);
+  if (currentTime < serverConfig[environment].startTime || currentTime > serverConfig[environment].endTime) {
+    reply.status(403).send({ error: "Outside of mint window." });
+    return;
+  }
+
   const idToken = authorizationHeader.replace("Bearer ", "");
 
   try {
