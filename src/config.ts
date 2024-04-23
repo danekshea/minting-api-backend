@@ -19,6 +19,7 @@ const serverConfig = {
     endTime: 1719292800,
     enableAllowList: true,
     maxTokenSupply: 10000,
+    enableFileLogging: true,
   },
   [config.Environment.PRODUCTION]: {
     API_URL: "https://api.immutable.com",
@@ -33,6 +34,7 @@ const serverConfig = {
     startTime: 1630000000,
     endTime: 1630000000,
     maxTokenSupply: 10000,
+    enableFileLogging: true,
   },
 };
 
