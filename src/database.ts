@@ -8,7 +8,7 @@ export async function isAllowlisted(address: string, tx: any): Promise<{ isAllow
     return { isAllowed: false, reason: "Address is not on the allowlist." };
   } else if (allowedAddress.quantityAllowed === 0) {
     // Address has already minted
-    return { isAllowed: false, reason: "Address has already minted." };
+    return { isAllowed: false, reason: "Address has no allowance left." };
   } else if (allowedAddress.isLocked) {
     // Address is currently locked
     return { isAllowed: false, reason: "Address is currently locked." };
@@ -29,21 +29,10 @@ export async function setUUID(address: string, uuid: string, tx: any): Promise<v
   });
 }
 
-export async function markUUIDMinted(uuid: string, tx: any): Promise<void> {
-  await tx.allowedAddress.updateMany({
-    where: {
-      uuid: uuid,
-    },
-    data: {
-      hasMinted: true,
-    },
-  });
-}
-
-export async function decreaseQuantityAllowed(uuid: string, tx: any): Promise<void> {
+export async function decreaseQuantityAllowed(address: string, tx: any): Promise<void> {
   await tx.allowedAddress.update({
     where: {
-      uuid: uuid,
+      address: address,
     },
     data: {
       quantityAllowed: {
@@ -53,25 +42,71 @@ export async function decreaseQuantityAllowed(uuid: string, tx: any): Promise<vo
   });
 }
 
-export async function lockUUID(uuid: string, tx: any): Promise<void> {
-  await tx.allowedAddress.updateMany({
+export async function lockAddress(address: string, tx: any): Promise<void> {
+  await tx.allowedAddress.update({
     where: {
-      uuid: uuid, // locks all records with this UUID
+      address: address, // locks all records with this UUID
     },
     data: {
       isLocked: true,
     },
   });
-  console.log(`Locked all addresses with UUID: ${uuid}`);
+  console.log(`Locked address: ${address}`);
 }
 
-export async function unlockUUID(uuid: string, tx: any): Promise<void> {
-  await tx.allowedAddress.updateMany({
+export async function unlockAddress(address: string, tx: any): Promise<void> {
+  await tx.allowedAddress.update({
     where: {
-      uuid: uuid,
+      address: address,
     },
     data: {
       isLocked: false,
+    },
+  });
+}
+
+export async function addTokenMinted(tokenID: number, collectionAddress: string, toAddress: string, uuid: string, status: string, tx: any): Promise<void> {
+  await tx.mintedTokens.create({
+    data: {
+      tokenID,
+      collectionAddress,
+      toAddress,
+      uuid,
+      status,
+    },
+  });
+}
+
+// Function to calculate the total minted quantity for tokens where mint has succeeded or is pending
+export async function getTotalMintedQuantity(tx: any): Promise<number> {
+  try {
+    // Aggregate the quantity to calculate the sum within the transaction context
+    const result = await tx.mintedTokens.aggregate({
+      where: {
+        status: {
+          in: ["succeeded", "pending"], // Filter tokens with status "succeeded" or "pending"
+        },
+      },
+      _sum: {
+        quantity: true,
+      },
+    });
+
+    // The sum will be null if there are no entries, so default to 0
+    return result._sum.quantity || 0;
+  } catch (error) {
+    console.error("Error retrieving total minted quantity for succeeded or pending mints within transaction:", error);
+    return 0;
+  }
+}
+
+export async function updateUUIDStatus(uuid: string, status: string, tx: any): Promise<void> {
+  await tx.mintedTokens.updateMany({
+    where: {
+      uuid,
+    },
+    data: {
+      status,
     },
   });
 }

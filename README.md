@@ -33,6 +33,11 @@ This project is a backend API for minting. It uses Prisma ORM with sqlite3.
 
    Use the above URL for the webhook endpoint with the path `/webhook`. For example: `https://ten-rooms-vanish.loca.lt/webhook`.
 
+## Features
+
+*Accounts for race conditions by locking the DB during minting for a specific address
+*Records all tokens minted in a DB
+
 ## To-Do List
 
 - [ ] Add a type for the JSON web token.

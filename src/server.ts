@@ -5,13 +5,13 @@ import serverConfig from "./config";
 import { environment } from "./config";
 import { mintByMintingAPI } from "./minting";
 import { verifyToken, decodeToken, verifySNSSignature, getMetadataByTokenId } from "./utils";
-import { decreaseQuantityAllowed, isAllowlisted, lockUUID, markUUIDMinted, setUUID, unlockUUID } from "./database";
+import { addTokenMinted, decreaseQuantityAllowed, isAllowlisted, lockAddress, recordTokenMinted, setUUID, unlockAddress, updateUUIDStatus } from "./database";
 import { PrismaClient } from "@prisma/client";
 import axios from "axios";
 
 const prisma = new PrismaClient();
 
-let mintingIDstart: number = 1000;
+let mintingIDstart: number = 1022;
 
 // //Disables CORS altogether
 // fastify.register(cors, {
@@ -64,7 +64,8 @@ fastify.post("/mint", async (request: FastifyRequest, reply: FastifyReply) => {
         // Lock the row by updating the `isLocked` field using UUID
         console.log("Locking wallet address by UUID");
         await setUUID(walletAddress, uuid, tx);
-        await lockUUID(uuid, tx);
+        await lockAddress(walletAddress, tx);
+        await addTokenMinted(mintingIDstart, serverConfig[environment].collectionAddress, walletAddress, uuid, "pending", tx);
 
         // Prepare the response
         const response = {
@@ -76,6 +77,7 @@ fastify.post("/mint", async (request: FastifyRequest, reply: FastifyReply) => {
         reply.send(response);
       });
     } catch (err) {
+      console.log(err);
       fastify.log.error("Error during minting process:", err);
       reply.status(500).send({ error: "An error occurred during the minting process" });
     }
@@ -179,16 +181,17 @@ fastify.post("/webhook", async (request, reply) => {
           if (status === "succeeded") {
             console.log("Mint request succeeded:", reference_id);
             await prisma.$transaction(async (tx) => {
-              await markUUIDMinted(reference_id, tx);
-              await unlockUUID(reference_id, tx);
-              await decreaseQuantityAllowed(reference_id, tx);
+              await unlockAddress(owner_address, tx);
+              await decreaseQuantityAllowed(owner_address, tx);
+              await updateUUIDStatus(reference_id, "succeeded", tx);
             });
           } else if (status === "pending") {
             console.log("Mint request pending:", reference_id);
           } else if (status === "failed") {
             console.log("Mint request failed:", reference_id);
             await prisma.$transaction(async (tx) => {
-              await unlockUUID(reference_id, tx);
+              await unlockAddress(owner_address, tx);
+              await updateUUIDStatus(reference_id, "failed", tx);
             });
           }
         } else {
