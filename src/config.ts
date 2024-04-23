@@ -14,6 +14,7 @@ const serverConfig = {
     DATABASE_URL: "file:./allowList.db",
     mintRequestURL: (chainName: string, collectionAddress: string, referenceId: string) => `https://api.sandbox.immutable.com/v1/chains/${chainName}/collections/${collectionAddress}/nfts/mint-requests/${referenceId}`,
     allowedTopicArn: "arn:aws:sns:us-east-2:783421985614:*",
+    metadataDir: "tokens/metadata",
   },
   [config.Environment.PRODUCTION]: {
     API_URL: "https://api.immutable.com",
@@ -23,6 +24,7 @@ const serverConfig = {
     DATABASE_URL: "file:./allowList.db",
     mintRequestURL: (chainName: string, collectionAddress: string, referenceId: string) => `https://api.immutable.com/v1/chains/${chainName}/collections/${collectionAddress}/nfts/mint-requests/${referenceId}`,
     allowedTopicArn: "arn:aws:sns:us-east-2:362750628221:*",
+    metadataDir: "tokens/metadata",
   },
 };
 

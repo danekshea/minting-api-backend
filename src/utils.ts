@@ -4,8 +4,10 @@ const axios = require("axios");
 import { promisify } from "util";
 import { IMX_JWT_KEY_URL } from "./config";
 import { createVerify } from "crypto";
+import path from "path";
 const SnsValidator = require("sns-validator");
 const validator = new SnsValidator();
+import fs from "fs";
 
 export async function verifyToken(IDtoken: string): Promise<void> {
   try {
@@ -52,6 +54,19 @@ export async function verifySNSSignature(webhookPayload: string): Promise<boolea
       }
     });
   });
+}
+
+export async function getMetadataByTokenId(metadataDir: string, tokenId: string): Promise<NFTMetadata | null> {
+  const filePath = path.join(metadataDir, `${tokenId}`);
+
+  try {
+    const fileContent = fs.readFileSync(filePath, "utf8");
+    const metadata: NFTMetadata = JSON.parse(fileContent);
+    return metadata;
+  } catch (error) {
+    console.error(`Error loading metadata for token ID ${tokenId}:`, error);
+    return null;
+  }
 }
 
 // async function main() {

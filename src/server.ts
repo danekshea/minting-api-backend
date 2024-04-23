@@ -4,12 +4,14 @@ import { FastifyReply, FastifyRequest } from "fastify";
 import serverConfig from "./config";
 import { environment } from "./config";
 import { mintByMintingAPI } from "./minting";
-import { verifyToken, decodeToken, verifySNSSignature } from "./utils";
+import { verifyToken, decodeToken, verifySNSSignature, getMetadataByTokenId } from "./utils";
 import { isAllowlisted, lockUUID, markUUIDMinted, setUUID, unlockUUID } from "./database";
 import { PrismaClient } from "@prisma/client";
 import axios from "axios";
 
 const prisma = new PrismaClient();
+
+let mintingIDstart: number = 1000;
 
 // //Disables CORS altogether
 // fastify.register(cors, {
@@ -52,9 +54,12 @@ fastify.post("/mint", async (request: FastifyRequest, reply: FastifyReply) => {
           return;
         }
 
+        const metadata = await getMetadataByTokenId(serverConfig[environment].metadataDir, mintingIDstart.toString());
+
         // Initiate the mint request
         console.log("Initiating mint request");
-        const uuid = await mintByMintingAPI(serverConfig[environment].collectionAddress, walletAddress);
+        const uuid = await mintByMintingAPI(serverConfig[environment].collectionAddress, walletAddress, metadata, mintingIDstart.toString());
+        mintingIDstart++;
 
         // Lock the row by updating the `isLocked` field using UUID
         console.log("Locking wallet address by UUID");
