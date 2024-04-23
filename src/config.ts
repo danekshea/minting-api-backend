@@ -16,6 +16,8 @@ const serverConfig = {
     allowedTopicArn: "arn:aws:sns:us-east-2:783421985614:*",
     metadataDir: "tokens/metadata",
     enableAllowList: true,
+    tokenIDstart: 1,
+    maxTokenSupply: 10000,
   },
   [config.Environment.PRODUCTION]: {
     API_URL: "https://api.immutable.com",
@@ -27,6 +29,7 @@ const serverConfig = {
     allowedTopicArn: "arn:aws:sns:us-east-2:362750628221:*",
     metadataDir: "tokens/metadata",
     enableAllowList: true,
+    maxTokenSupply: 10000,
   },
 };
 

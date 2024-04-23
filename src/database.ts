@@ -1,3 +1,7 @@
+import { PrismaClient } from "@prisma/client";
+
+const prisma = new PrismaClient();
+
 export async function isAllowlisted(address: string, tx: any): Promise<{ isAllowed: boolean; reason?: string }> {
   const allowedAddress = await tx.allowedAddress.findUnique({
     where: { address },
@@ -77,25 +81,39 @@ export async function addTokenMinted(tokenID: number, collectionAddress: string,
   });
 }
 
-// Function to calculate the total minted quantity for tokens where mint has succeeded or is pending
-export async function getTotalMintedQuantity(tx: any): Promise<number> {
+export async function getTotalMintedQuantity(): Promise<number> {
   try {
-    // Aggregate the quantity to calculate the sum within the transaction context
-    const result = await tx.mintedTokens.aggregate({
+    // Aggregate the quantity to calculate the sum
+    const result = await prisma.mintedTokens.aggregate({
       where: {
         status: {
           in: ["succeeded", "pending"], // Filter tokens with status "succeeded" or "pending"
         },
       },
-      _sum: {
-        quantity: true,
+      _count: {
+        tokenID: true,
       },
     });
 
     // The sum will be null if there are no entries, so default to 0
-    return result._sum.quantity || 0;
+    return result._count.tokenID || 0;
   } catch (error) {
-    console.error("Error retrieving total minted quantity for succeeded or pending mints within transaction:", error);
+    console.error("Error retrieving total minted quantity for succeeded or pending mints:", error);
+    return 0;
+  }
+}
+
+export async function getMaxTokenID(): Promise<number> {
+  try {
+    const result = await prisma.mintedTokens.aggregate({
+      _max: {
+        tokenID: true,
+      },
+    });
+
+    return result._max.tokenID || 0;
+  } catch (error) {
+    console.error("Error retrieving max token ID:", error);
     return 0;
   }
 }

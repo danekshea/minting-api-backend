@@ -45,6 +45,7 @@ This project is a backend API for minting. It uses Prisma ORM with sqlite3.
 - [ ] Potentially add more variables to the allowlist like expirations etc.
 - [ ] Consider adding batching functions. This will require ways to batch mint requests together, but also a way of checking a UUID not for a single mint but several.
 - [ ] Add ERC1155 support once the minting API is ready
+- [ ] Add the ability to choose whether you want mintByQuantity or mintByID
 
 ## Tech Stack
 

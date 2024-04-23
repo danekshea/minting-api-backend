@@ -5,13 +5,12 @@ import serverConfig from "./config";
 import { environment } from "./config";
 import { mintByMintingAPI } from "./minting";
 import { verifyToken, decodeToken, verifySNSSignature, getMetadataByTokenId } from "./utils";
-import { addTokenMinted, decreaseQuantityAllowed, isAllowlisted, lockAddress, recordTokenMinted, setUUID, unlockAddress, updateUUIDStatus } from "./database";
+import { addTokenMinted, decreaseQuantityAllowed, getMaxTokenID, getTotalMintedQuantity, isAllowlisted, lockAddress, setUUID, unlockAddress, updateUUIDStatus } from "./database";
 import { PrismaClient } from "@prisma/client";
 import axios from "axios";
 
 const prisma = new PrismaClient();
-
-let mintingIDstart: number = 1022;
+let tokenIDcounter = 0;
 
 // //Disables CORS altogether
 // fastify.register(cors, {
@@ -31,6 +30,13 @@ fastify.post("/mint", async (request: FastifyRequest, reply: FastifyReply) => {
 
   if (!authorizationHeader) {
     reply.status(401).send({ error: "Missing authorization header" });
+    return;
+  }
+
+  // Check the total minted supply before initiating the minting process
+  const mintedSupply = await getTotalMintedQuantity();
+  if (mintedSupply >= serverConfig[environment].maxTokenSupply) {
+    reply.status(403).send({ error: "Total supply minted." });
     return;
   }
 
@@ -54,18 +60,18 @@ fastify.post("/mint", async (request: FastifyRequest, reply: FastifyReply) => {
           return;
         }
 
-        const metadata = await getMetadataByTokenId(serverConfig[environment].metadataDir, mintingIDstart.toString());
+        const metadata = await getMetadataByTokenId(serverConfig[environment].metadataDir, tokenIDcounter.toString());
 
         // Initiate the mint request
         console.log("Initiating mint request");
-        const uuid = await mintByMintingAPI(serverConfig[environment].collectionAddress, walletAddress, metadata, mintingIDstart.toString());
-        mintingIDstart++;
+        const uuid = await mintByMintingAPI(serverConfig[environment].collectionAddress, walletAddress, metadata, tokenIDcounter.toString());
 
         // Lock the row by updating the `isLocked` field using UUID
         console.log("Locking wallet address by UUID");
         await setUUID(walletAddress, uuid, tx);
         await lockAddress(walletAddress, tx);
-        await addTokenMinted(mintingIDstart, serverConfig[environment].collectionAddress, walletAddress, uuid, "pending", tx);
+        await addTokenMinted(tokenIDcounter, serverConfig[environment].collectionAddress, walletAddress, uuid, "pending", tx);
+        tokenIDcounter++;
 
         // Prepare the response
         const response = {
@@ -211,6 +217,8 @@ fastify.post("/webhook", async (request, reply) => {
 const start = async () => {
   try {
     await fastify.listen(3000);
+    tokenIDcounter = (await getMaxTokenID()) + 1;
+    console.log(`Token ID counter initialized at ${tokenIDcounter}`);
     fastify.log.info(`Server running on ${fastify.server.address().port}`);
   } catch (err) {
     fastify.log.error(err);
