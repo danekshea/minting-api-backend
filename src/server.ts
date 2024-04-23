@@ -82,6 +82,49 @@ fastify.post("/mint", async (request: FastifyRequest, reply: FastifyReply) => {
   }
 });
 
+fastify.get("/check", async (request: FastifyRequest, reply: FastifyReply) => {
+  const prisma = new PrismaClient();
+  const authorizationHeader = request.headers["authorization"];
+
+  if (!authorizationHeader) {
+    reply.status(401).send({ error: "Missing authorization header" });
+    return;
+  }
+
+  const idToken = authorizationHeader.replace("Bearer ", "");
+
+  try {
+    // Verify and decode the IDToken, should throw an error if the signature is invalid
+    await verifyToken(idToken);
+    console.log("ID token verified");
+    const decodedToken = await decodeToken(idToken);
+    const walletAddress = decodedToken.payload.passport.zkevm_eth_address;
+
+    try {
+      // Start a database transaction
+      await prisma.$transaction(async (tx) => {
+        // Check if the wallet address is allowed to mint
+        const allowlistResult = await isAllowlisted(walletAddress, tx);
+        if (!allowlistResult.isAllowed) {
+          console.log(allowlistResult.reason);
+          reply.status(403).send({ error: `${allowlistResult.reason}` });
+          return;
+        } else {
+          reply.send({ status: "ok" });
+        }
+      });
+    } catch (err) {
+      fastify.log.error("Error during checking process:", err);
+      reply.status(500).send({ error: "An error occurred during the checking process" });
+    }
+  } catch (err) {
+    fastify.log.error("Failed to verify ID token:", err);
+    reply.status(401).send({ error: "Invalid ID token" });
+  } finally {
+    await prisma.$disconnect();
+  }
+});
+
 fastify.post("/webhook", async (request, reply) => {
   const { Type, SubscribeURL, TopicArn, Message, MessageId, Timestamp, Signature, SigningCertURL } = request.body;
   console.log("Received webhook:", request.body);

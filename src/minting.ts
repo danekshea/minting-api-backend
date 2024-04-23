@@ -2,13 +2,12 @@ import { blockchainData, config as sdkConfig } from "@imtbl/sdk";
 import { v4 as uuidv4 } from "uuid";
 import serverConfig from "./config";
 import { environment } from "./config";
-import axios from "axios";
 
-export const mintByMintingAPI = async (contractAddress: string, walletAddress: string): Promise<string> => {
+export const mintByMintingAPI = async (contractAddress: string, walletAddress: string, tokenID?: string): Promise<string> => {
   //Remember to grant the minting role to the mintingAPIAddress
   const config: blockchainData.BlockchainDataModuleConfiguration = {
     baseConfig: new sdkConfig.ImmutableConfiguration({
-      environment: sdkConfig.Environment.SANDBOX,
+      environment: environment,
     }),
     overrides: {
       basePath: serverConfig[environment].API_URL,
@@ -25,7 +24,7 @@ export const mintByMintingAPI = async (contractAddress: string, walletAddress: s
   const uuid = uuidv4();
 
   const response = await client.createMintRequest({
-    chainName,
+    chainName: serverConfig[environment].chainName,
     contractAddress,
     createMintRequestRequest: {
       assets: [
@@ -33,7 +32,7 @@ export const mintByMintingAPI = async (contractAddress: string, walletAddress: s
           owner_address: walletAddress,
           reference_id: uuid,
           //Remove token_id line if you want to batch mint
-          //token_id: "2",
+          token_id: tokenID || null,
           metadata: {
             name: "Homer",
             description: null,
