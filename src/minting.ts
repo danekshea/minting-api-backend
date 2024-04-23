@@ -2,9 +2,9 @@ import { blockchainData, config as sdkConfig } from "@imtbl/sdk";
 import { v4 as uuidv4 } from "uuid";
 import serverConfig from "./config";
 import { environment } from "./config";
+import logger from "./logger";
 
 export const mintByMintingAPI = async (contractAddress: string, walletAddress: string, metadata: NFTMetadata | null, tokenID?: string): Promise<string> => {
-  //Remember to grant the minting role to the mintingAPIAddress
   const config: blockchainData.BlockchainDataModuleConfiguration = {
     baseConfig: new sdkConfig.ImmutableConfiguration({
       environment: environment,
@@ -18,13 +18,11 @@ export const mintByMintingAPI = async (contractAddress: string, walletAddress: s
   };
 
   const client = new blockchainData.BlockchainData(config);
-
   const uuid = uuidv4();
 
   const asset: any = {
     owner_address: walletAddress,
     reference_id: uuid,
-    // Remove token_id line if you want to batch mint
     token_id: tokenID || null,
   };
 
@@ -32,13 +30,21 @@ export const mintByMintingAPI = async (contractAddress: string, walletAddress: s
     asset.metadata = metadata;
   }
 
-  const response = await client.createMintRequest({
-    chainName: serverConfig[environment].chainName,
-    contractAddress,
-    createMintRequestRequest: {
-      assets: [asset],
-    },
-  });
-  console.log(`Mint request sent with UUID: ${uuid}`);
-  return uuid;
+  try {
+    const response = await client.createMintRequest({
+      chainName: serverConfig[environment].chainName,
+      contractAddress,
+      createMintRequestRequest: {
+        assets: [asset],
+      },
+    });
+
+    logger.info(`Mint request sent with UUID: ${uuid}`);
+    logger.debug("Mint request response:", response);
+
+    return uuid;
+  } catch (error) {
+    logger.error("Error sending mint request:", error);
+    throw error;
+  }
 };

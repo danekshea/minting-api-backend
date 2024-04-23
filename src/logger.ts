@@ -22,7 +22,7 @@ const transportsArray: transport[] = [
 if (serverConfig[environment].enableFileLogging) {
   transportsArray.push(
     new DailyRotateFile({
-      filename: "logs/blockchain-migration-tool-backend-%DATE%.log",
+      filename: "logs/minting-api-backend-%DATE%.log",
       datePattern: "YYYY-MM-DD",
       zippedArchive: true,
       maxSize: "20m",

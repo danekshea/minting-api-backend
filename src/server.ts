@@ -8,16 +8,11 @@ import { verifyToken, decodeToken, verifySNSSignature, getMetadataByTokenId } fr
 import { addTokenMinted, decreaseQuantityAllowed, getMaxTokenID, getTotalMintedQuantity, isAllowlisted, lockAddress, setUUID, unlockAddress, updateUUIDStatus } from "./database";
 import { PrismaClient } from "@prisma/client";
 import axios from "axios";
+import logger from "./logger";
 
 const prisma = new PrismaClient();
 let tokenIDcounter = 0;
 
-// //Disables CORS altogether
-// fastify.register(cors, {
-//   origin: true,
-// });
-
-//Change this once the actual API goes live
 fastify.register(cors, {
   origin: "*",
   methods: ["GET", "POST", "PUT", "DELETE"],
@@ -29,20 +24,21 @@ fastify.post("/mint", async (request: FastifyRequest, reply: FastifyReply) => {
   const authorizationHeader = request.headers["authorization"];
 
   if (!authorizationHeader) {
+    logger.warn("Missing authorization header");
     reply.status(401).send({ error: "Missing authorization header" });
     return;
   }
 
-  // Check the total minted supply before initiating the minting process
   const mintedSupply = await getTotalMintedQuantity();
   if (mintedSupply >= serverConfig[environment].maxTokenSupply) {
+    logger.info("Total supply minted. Minting not allowed.");
     reply.status(403).send({ error: "Total supply minted." });
     return;
   }
 
-  //check if mint is between start time and end time
   const currentTime = Math.floor(Date.now() / 1000);
   if (currentTime < serverConfig[environment].startTime || currentTime > serverConfig[environment].endTime) {
+    logger.info("Current time is outside the minting window. Minting not allowed.");
     reply.status(403).send({ error: "Outside of mint window." });
     return;
   }
@@ -50,52 +46,44 @@ fastify.post("/mint", async (request: FastifyRequest, reply: FastifyReply) => {
   const idToken = authorizationHeader.replace("Bearer ", "");
 
   try {
-    // Verify and decode the IDToken, should throw an error if the signature is invalid
     await verifyToken(idToken);
-    console.log("ID token verified");
+    logger.debug("ID token verified successfully");
     const decodedToken = await decodeToken(idToken);
     const walletAddress = decodedToken.payload.passport.zkevm_eth_address;
 
     try {
-      // Start a database transaction
       await prisma.$transaction(async (tx) => {
-        // Check if the wallet address is allowed to mint
         const allowlistResult = await isAllowlisted(walletAddress, tx);
         if (!allowlistResult.isAllowed) {
-          console.log(allowlistResult.reason);
+          logger.info(`Wallet address ${walletAddress} not allowed to mint: ${allowlistResult.reason}`);
           reply.status(403).send({ error: `${allowlistResult.reason}` });
           return;
         }
 
         const metadata = await getMetadataByTokenId(serverConfig[environment].metadataDir, tokenIDcounter.toString());
 
-        // Initiate the mint request
-        console.log("Initiating mint request");
+        logger.info(`Initiating mint request for wallet address ${walletAddress}`);
         const uuid = await mintByMintingAPI(serverConfig[environment].collectionAddress, walletAddress, metadata, tokenIDcounter.toString());
 
-        // Lock the row by updating the `isLocked` field using UUID
-        console.log("Locking wallet address by UUID");
+        logger.debug(`Locking wallet address ${walletAddress} by UUID ${uuid}`);
         await setUUID(walletAddress, uuid, tx);
         await lockAddress(walletAddress, tx);
         await addTokenMinted(tokenIDcounter, serverConfig[environment].collectionAddress, walletAddress, uuid, "pending", tx);
         tokenIDcounter++;
 
-        // Prepare the response
         const response = {
           walletAddress,
           uuid,
         };
 
-        // Send the response
         reply.send(response);
       });
     } catch (err) {
-      console.log(err);
-      fastify.log.error("Error during minting process:", err);
+      logger.error("Error during minting process:", err);
       reply.status(500).send({ error: "An error occurred during the minting process" });
     }
   } catch (err) {
-    fastify.log.error("Failed to verify ID token:", err);
+    logger.warn("Failed to verify ID token:", err);
     reply.status(401).send({ error: "Invalid ID token" });
   } finally {
     await prisma.$disconnect();
@@ -107,6 +95,7 @@ fastify.get("/check", async (request: FastifyRequest, reply: FastifyReply) => {
   const authorizationHeader = request.headers["authorization"];
 
   if (!authorizationHeader) {
+    logger.warn("Missing authorization header");
     reply.status(401).send({ error: "Missing authorization header" });
     return;
   }
@@ -114,31 +103,29 @@ fastify.get("/check", async (request: FastifyRequest, reply: FastifyReply) => {
   const idToken = authorizationHeader.replace("Bearer ", "");
 
   try {
-    // Verify and decode the IDToken, should throw an error if the signature is invalid
     await verifyToken(idToken);
-    console.log("ID token verified");
+    logger.debug("ID token verified successfully");
     const decodedToken = await decodeToken(idToken);
     const walletAddress = decodedToken.payload.passport.zkevm_eth_address;
 
     try {
-      // Start a database transaction
       await prisma.$transaction(async (tx) => {
-        // Check if the wallet address is allowed to mint
         const allowlistResult = await isAllowlisted(walletAddress, tx);
         if (!allowlistResult.isAllowed) {
-          console.log(allowlistResult.reason);
+          logger.info(`Wallet address ${walletAddress} not allowed to mint: ${allowlistResult.reason}`);
           reply.status(403).send({ error: `${allowlistResult.reason}` });
           return;
         } else {
+          logger.debug(`Wallet address ${walletAddress} is allowed to mint`);
           reply.send({ status: "ok" });
         }
       });
     } catch (err) {
-      fastify.log.error("Error during checking process:", err);
+      logger.error("Error during checking process:", err);
       reply.status(500).send({ error: "An error occurred during the checking process" });
     }
   } catch (err) {
-    fastify.log.error("Failed to verify ID token:", err);
+    logger.warn("Failed to verify ID token:", err);
     reply.status(401).send({ error: "Invalid ID token" });
   } finally {
     await prisma.$disconnect();
@@ -147,7 +134,7 @@ fastify.get("/check", async (request: FastifyRequest, reply: FastifyReply) => {
 
 fastify.post("/webhook", async (request, reply) => {
   const { Type, SubscribeURL, TopicArn, Message, MessageId, Timestamp, Signature, SigningCertURL } = request.body;
-  console.log("Received webhook:", request.body);
+  logger.debug("Received webhook:", request.body);
 
   if (Type === "SubscriptionConfirmation") {
     const allowedTopicArnPrefix = serverConfig[environment].allowedTopicArn.replace("*", "");
@@ -159,18 +146,18 @@ fastify.post("/webhook", async (request, reply) => {
         if (isValid) {
           const response = await axios.get(SubscribeURL);
           if (response.status === 200) {
-            console.log("Webhook subscription confirmed");
+            logger.info("Webhook subscription confirmed successfully");
           } else {
-            console.error("Failed to confirm webhook subscription");
+            logger.error("Failed to confirm webhook subscription");
           }
         } else {
-          console.error("Invalid signature. Subscription confirmation denied.");
+          logger.warn("Invalid signature. Subscription confirmation denied.");
         }
       } catch (error) {
-        console.error("Error confirming webhook subscription:", error);
+        logger.error("Error confirming webhook subscription:", error);
       }
     } else {
-      console.warn("Received subscription confirmation from an unknown TopicArn:", TopicArn);
+      logger.warn("Received subscription confirmation from an unknown TopicArn:", TopicArn);
     }
 
     reply.send({ status: "ok" });
@@ -185,36 +172,32 @@ fastify.post("/webhook", async (request, reply) => {
         const { reference_id, status, owner_address } = message.data;
 
         if (event_name === "imtbl_zkevm_mint_request_updated") {
-          //log all the above values
-          console.log("Received notification:", message);
-          console.log("Reference ID:", reference_id);
-          console.log("Status:", status);
-          console.log("Owner address:", owner_address);
+          logger.info("Received mint request update notification:", message);
 
           if (status === "succeeded") {
-            console.log("Mint request succeeded:", reference_id);
+            logger.info(`Mint request ${reference_id} succeeded for owner address ${owner_address}`);
             await prisma.$transaction(async (tx) => {
               await unlockAddress(owner_address, tx);
               await decreaseQuantityAllowed(owner_address, tx);
               await updateUUIDStatus(reference_id, "succeeded", tx);
             });
           } else if (status === "pending") {
-            console.log("Mint request pending:", reference_id);
+            logger.debug(`Mint request ${reference_id} is pending`);
           } else if (status === "failed") {
-            console.log("Mint request failed:", reference_id);
+            logger.warn(`Mint request ${reference_id} failed for owner address ${owner_address}`);
             await prisma.$transaction(async (tx) => {
               await unlockAddress(owner_address, tx);
               await updateUUIDStatus(reference_id, "failed", tx);
             });
           }
         } else {
-          console.log("Received notification for an unknown event:", event_name);
+          logger.warn("Received notification for an unknown event:", event_name);
         }
       } else {
-        console.error("Invalid signature. Notification denied.");
+        logger.warn("Invalid signature. Notification denied.");
       }
     } catch (error) {
-      console.error("Error processing notification:", error);
+      logger.error("Error processing notification:", error);
     }
     reply.send({ status: "ok" });
   }
@@ -225,10 +208,9 @@ const start = async () => {
   try {
     await fastify.listen(3000);
     tokenIDcounter = (await getMaxTokenID()) + 1;
-    console.log(`Token ID counter initialized at ${tokenIDcounter}`);
-    fastify.log.info(`Server running on ${fastify.server.address().port}`);
+    logger.info(`Server started successfully. Token ID counter initialized at ${tokenIDcounter}.`);
   } catch (err) {
-    fastify.log.error(err);
+    logger.error("Error starting server:", err);
     process.exit(1);
   }
 };
