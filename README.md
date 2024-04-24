@@ -1,6 +1,17 @@
 # Minting API Backend for conducting a free mint
 
-This project is a backend API for minting. It uses Prisma ORM with sqlite3.
+This project is a backend API for doing a free mint on IMX zkEVM.
+
+## Features
+
+- Uses the Immutable Minting API to ensure that minting is sponsored & transaction life cycle monitoring, nonce management etc. is abstracted.
+- Accounts for race conditions by locking the DB during minting for a specific address.
+- Records all tokens minted in a DB, both during pending & succeeded states. If the server crashes or a large amount of mints are pending, it's counted in the max supply.
+- Ability to allowlist addresses for minting and designate a quantity. For example, an address has the right to mint 5 tokens.
+- Webhook support for minting events, no need for polling. Also allows for asynchronous updating from a pending to succeeded or failed state.
+- Authenticated requests that are verified from both Passport and from IMX for webhooks, both on subscription & notifications.
+- Rich logging using Winston for troubleshooting & debugging.
+- Define phases that the mint should occur in, with different max supplies, start times, end times, and whether the phase is allowlisted.
 
 ## Setup Instructions
 
@@ -52,17 +63,6 @@ This project is a backend API for minting. It uses Prisma ORM with sqlite3.
    ```
 
    Use the above URL for the webhook endpoint with the path `/webhook`. For example: `https://ten-rooms-vanish.loca.lt/webhook`.
-
-## Features
-
-- Uses the Immutable Minting API to ensure that minting is sponsored & transaction life cycle monitoring, nonce management etc. is abstracted.
-- Accounts for race conditions by locking the DB during minting for a specific address.
-- Records all tokens minted in a DB, both during pending & succeeded states. If the server crashes or a large amount of mints are pending, it's counted in the max supply.
-- Ability to allowlist addresses for minting and designate a quantity. For example, an address has the right to mint 5 tokens.
-- Webhook support for minting events, no need for polling. Also allows for asynchronous updating from a pending to succeeded or failed state.
-- Authenticated requests that are verified from both Passport and from IMX for webhooks, both on subscription & notifications.
-- Ability to designate a start & end time & max supply for the minting.
-- Rich logging using Winston for troubleshooting & debugging.
 
 ## To-Do List
 
