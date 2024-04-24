@@ -98,3 +98,21 @@ export async function updateUUIDStatus(uuid: string, status: string, tx: any): P
   });
   logger.info(`Updated status of minted tokens with UUID ${uuid} to ${status}.`);
 }
+
+export async function getTokensMintedByWallet(walletAddress: string): Promise<number> {
+  try {
+    const result = await prisma.mintedTokens.aggregate({
+      where: {
+        toAddress: walletAddress,
+        status: { in: ["succeeded", "pending"] },
+      },
+      _count: { tokenID: true },
+    });
+    const mintedQuantity = result._count.tokenID || 0;
+    logger.debug(`Minted quantity for wallet ${walletAddress}: ${mintedQuantity}.`);
+    return mintedQuantity;
+  } catch (error) {
+    logger.error(`Error retrieving minted quantity for wallet ${walletAddress}:`, error);
+    return 0;
+  }
+}

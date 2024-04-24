@@ -20,6 +20,23 @@ const serverConfig = {
     enableAllowList: true,
     maxTokenSupply: 10000,
     enableFileLogging: true,
+    mintPhases: [
+      {
+        name: "Presale",
+        startTime: 1629913600,
+        endTime: 1629999999,
+        maxSupply: 1000,
+        enableAllowList: true,
+      },
+      {
+        name: "Public Sale",
+        startTime: 1630000000,
+        endTime: 1719292800,
+        maxSupply: 9000,
+        enableAllowList: false,
+        maxPerWallet: 15,
+      },
+    ],
   },
   [config.Environment.PRODUCTION]: {
     API_URL: "https://api.immutable.com",
@@ -35,6 +52,23 @@ const serverConfig = {
     endTime: 1630000000,
     maxTokenSupply: 10000,
     enableFileLogging: true,
+    mintPhases: [
+      {
+        name: "Presale",
+        startTime: 1629913600,
+        endTime: 1629999999,
+        maxSupply: 1000,
+        enableAllowList: true,
+      },
+      {
+        name: "Public Sale",
+        startTime: 1630000000,
+        endTime: 1719292800,
+        maxSupply: 9000,
+        enableAllowList: false,
+        maxPerWallet: 2,
+      },
+    ],
   },
 };
 

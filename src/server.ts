@@ -5,7 +5,7 @@ import serverConfig from "./config";
 import { environment } from "./config";
 import { mintByMintingAPI } from "./minting";
 import { verifyToken, decodeToken, verifySNSSignature, getMetadataByTokenId } from "./utils";
-import { addTokenMinted, decreaseQuantityAllowed, getMaxTokenID, getTotalMintedQuantity, isAllowlisted, lockAddress, setUUID, unlockAddress, updateUUIDStatus } from "./database";
+import { addTokenMinted, decreaseQuantityAllowed, getMaxTokenID, getTokensMintedByWallet, getTotalMintedQuantity, isAllowlisted, lockAddress, setUUID, unlockAddress, updateUUIDStatus } from "./database";
 import { PrismaClient } from "@prisma/client";
 import axios from "axios";
 import logger from "./logger";
@@ -29,17 +29,19 @@ fastify.post("/mint", async (request: FastifyRequest, reply: FastifyReply) => {
     return;
   }
 
-  const mintedSupply = await getTotalMintedQuantity();
-  if (mintedSupply >= serverConfig[environment].maxTokenSupply) {
-    logger.info("Total supply minted. Minting not allowed.");
-    reply.status(403).send({ error: "Total supply minted." });
+  const currentTime = Math.floor(Date.now() / 1000);
+  const currentPhase = serverConfig[environment].mintPhases.find((phase) => currentTime >= phase.startTime && currentTime <= phase.endTime);
+
+  if (!currentPhase) {
+    logger.info("No active mint phase. Minting not allowed.");
+    reply.status(403).send({ error: "No active mint phase." });
     return;
   }
 
-  const currentTime = Math.floor(Date.now() / 1000);
-  if (currentTime < serverConfig[environment].startTime || currentTime > serverConfig[environment].endTime) {
-    logger.info("Current time is outside the minting window. Minting not allowed.");
-    reply.status(403).send({ error: "Outside of mint window." });
+  const mintedSupply = await getTotalMintedQuantity();
+  if (mintedSupply >= currentPhase.maxSupply) {
+    logger.info(`Maximum supply for the current phase (${currentPhase.name}) has been minted.`);
+    reply.status(403).send({ error: `Maximum supply for the current phase (${currentPhase.name}) has been minted.` });
     return;
   }
 
@@ -53,11 +55,22 @@ fastify.post("/mint", async (request: FastifyRequest, reply: FastifyReply) => {
 
     try {
       await prisma.$transaction(async (tx) => {
-        const allowlistResult = await isAllowlisted(walletAddress, tx);
-        if (!allowlistResult.isAllowed) {
-          logger.info(`Wallet address ${walletAddress} not allowed to mint: ${allowlistResult.reason}`);
-          reply.status(403).send({ error: `${allowlistResult.reason}` });
-          return;
+        if (currentPhase.enableAllowList) {
+          const allowlistResult = await isAllowlisted(walletAddress, tx);
+          if (!allowlistResult.isAllowed) {
+            logger.info(`Wallet address ${walletAddress} not allowed to mint in the current phase (${currentPhase.name}): ${allowlistResult.reason}`);
+            reply.status(403).send({ error: `${allowlistResult.reason}` });
+            return;
+          }
+        }
+
+        if (currentPhase.maxPerWallet) {
+          const mintedByWallet = await getTokensMintedByWallet(walletAddress);
+          if (mintedByWallet >= currentPhase.maxPerWallet) {
+            logger.info(`Wallet address ${walletAddress} has reached the maximum mints per wallet (${currentPhase.maxPerWallet}) for the current phase (${currentPhase.name}).`);
+            reply.status(403).send({ error: `Maximum mints per wallet (${currentPhase.maxPerWallet}) reached for the current phase (${currentPhase.name}).` });
+            return;
+          }
         }
 
         const metadata = await getMetadataByTokenId(serverConfig[environment].metadataDir, tokenIDcounter.toString());
@@ -90,7 +103,19 @@ fastify.post("/mint", async (request: FastifyRequest, reply: FastifyReply) => {
   }
 });
 
-fastify.get("/check", async (request: FastifyRequest, reply: FastifyReply) => {
+fastify.get("/config", async (request: FastifyRequest, reply: FastifyReply) => {
+  const mintPhases = serverConfig[environment].mintPhases.map((phase) => ({
+    name: phase.name,
+    startTime: phase.startTime,
+    endTime: phase.endTime,
+    maxSupply: phase.maxSupply,
+    enableAllowList: phase.enableAllowList,
+  }));
+
+  reply.send({ mintPhases });
+});
+
+fastify.get("/eligibility", async (request: FastifyRequest, reply: FastifyReply) => {
   const prisma = new PrismaClient();
   const authorizationHeader = request.headers["authorization"];
 
@@ -108,22 +133,28 @@ fastify.get("/check", async (request: FastifyRequest, reply: FastifyReply) => {
     const decodedToken = await decodeToken(idToken);
     const walletAddress = decodedToken.payload.passport.zkevm_eth_address;
 
-    try {
-      await prisma.$transaction(async (tx) => {
-        const allowlistResult = await isAllowlisted(walletAddress, tx);
-        if (!allowlistResult.isAllowed) {
-          logger.info(`Wallet address ${walletAddress} not allowed to mint: ${allowlistResult.reason}`);
-          reply.status(403).send({ error: `${allowlistResult.reason}` });
-          return;
-        } else {
-          logger.debug(`Wallet address ${walletAddress} is allowed to mint`);
-          reply.send({ status: "ok" });
+    const currentTime = Math.floor(Date.now() / 1000);
+    const mintPhases = serverConfig[environment].mintPhases;
+
+    const phaseEligibility = await Promise.all(
+      mintPhases.map(async (phase) => {
+        const isActive = currentTime >= phase.startTime && currentTime <= phase.endTime;
+
+        let isEligible = !phase.enableAllowList;
+        if (phase.enableAllowList) {
+          const allowListResult = await isAllowlisted(walletAddress, prisma);
+          isEligible = allowListResult.isAllowed;
         }
-      });
-    } catch (err) {
-      logger.error("Error during checking process:", err);
-      reply.status(500).send({ error: "An error occurred during the checking process" });
-    }
+
+        return {
+          name: phase.name,
+          isActive,
+          isEligible,
+        };
+      })
+    );
+
+    reply.send({ phases: phaseEligibility });
   } catch (err) {
     logger.warn("Failed to verify ID token:", err);
     reply.status(401).send({ error: "Invalid ID token" });

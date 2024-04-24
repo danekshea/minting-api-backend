@@ -12,7 +12,26 @@ This project is a backend API for minting. It uses Prisma ORM with sqlite3.
    ```
    cp .env.example .env
    ```
-3. Make sure to configure `src/config.ts` with your collection address after deploying the contract on hub.immutable.com
+3. Make sure to configure `src/config.ts` with your collection address after deploying the contract on hub.immutable.com. Pay specific attention to the mintPhases parameter:
+   ```
+   mintPhases: [
+     {
+       name: "Presale",
+       startTime: 1629913600,
+       endTime: 1629999999,
+       maxSupply: 1000,
+       enableAllowList: true,
+     },
+     {
+       name: "Public Sale",
+       startTime: 1630000000,
+       endTime: 1719292800,
+       maxSupply: 9000,
+       enableAllowList: false,
+       maxPerWallet: 2,
+     }],
+   ```
+   Keep in mind that you can configure a single phase if you're not planning a phased approach but just a start/end time.
 4. Populate your metadata in `tokens/metadata` with the format of filename being {tokenid} and the metadata format following [this](https://docs.immutable.com/docs/zkEVM/products/minting/metadata/format) format. There's already examples in the folder for a project called copypasta.
 5. Run the DB migrations:
    ```
