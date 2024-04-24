@@ -55,14 +55,14 @@ This project is a backend API for minting. It uses Prisma ORM with sqlite3.
 
 ## Features
 
-*Uses the Immutable Minting API to ensure that minting is sponsored & transaction life cycle monitoring, nonce management etc. is abstracted.
-*Accounts for race conditions by locking the DB during minting for a specific address.
-*Records all tokens minted in a DB, both during pending & succeeded states. If the server crashes or a large amount of mints are pending, it's counted in the max supply.
-*Ability to allowlist addresses for minting and designate a quantity. For example that an address has the right to mint 5 tokens.
-*Webhook support for minting events, no need for polling. Also allows for asynchronous updating from a pending to succeeded or failed state.
-*Authenticated requests that are verified from both Passport and from IMX for webhooks, both on subscription & notifications.
-*Ability to designate a start & end time & max supply for the minting.
-*Rich logging using Winston for troubleshooting & debugging.
+- Uses the Immutable Minting API to ensure that minting is sponsored & transaction life cycle monitoring, nonce management etc. is abstracted.
+- Accounts for race conditions by locking the DB during minting for a specific address.
+- Records all tokens minted in a DB, both during pending & succeeded states. If the server crashes or a large amount of mints are pending, it's counted in the max supply.
+- Ability to allowlist addresses for minting and designate a quantity. For example, an address has the right to mint 5 tokens.
+- Webhook support for minting events, no need for polling. Also allows for asynchronous updating from a pending to succeeded or failed state.
+- Authenticated requests that are verified from both Passport and from IMX for webhooks, both on subscription & notifications.
+- Ability to designate a start & end time & max supply for the minting.
+- Rich logging using Winston for troubleshooting & debugging.
 
 ## To-Do List
 
