@@ -1,4 +1,4 @@
-# Minting API Backend for Free Mints
+# Minting API Backend for conducting a free mint
 
 This project is a backend API for minting. It uses Prisma ORM with sqlite3.
 
