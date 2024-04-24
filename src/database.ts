@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Prisma } from "@prisma/client";
 import logger from "./logger";
 import serverConfig from "./config";
 import { environment } from "./config";
@@ -24,7 +24,7 @@ export async function isAllowlisted(address: string, tx: any): Promise<{ isAllow
   return { isAllowed: true };
 }
 
-export async function setUUID(address: string, uuid: string, tx: any): Promise<void> {
+export async function setUUID(address: string, uuid: string, tx: Prisma.TransactionClient): Promise<void> {
   await tx.allowedAddress.update({
     where: { address },
     data: { uuid },
@@ -32,7 +32,7 @@ export async function setUUID(address: string, uuid: string, tx: any): Promise<v
   logger.debug(`Set UUID ${uuid} for address ${address}.`);
 }
 
-export async function decreaseQuantityAllowed(address: string, tx: any): Promise<void> {
+export async function decreaseQuantityAllowed(address: string, tx: Prisma.TransactionClient): Promise<void> {
   await tx.allowedAddress.update({
     where: { address },
     data: { quantityAllowed: { decrement: 1 } },
@@ -40,7 +40,7 @@ export async function decreaseQuantityAllowed(address: string, tx: any): Promise
   logger.info(`Decreased quantity allowed for address ${address}.`);
 }
 
-export async function lockAddress(address: string, tx: any): Promise<void> {
+export async function lockAddress(address: string, tx: Prisma.TransactionClient): Promise<void> {
   await tx.allowedAddress.update({
     where: { address },
     data: { isLocked: true },
@@ -48,7 +48,7 @@ export async function lockAddress(address: string, tx: any): Promise<void> {
   logger.info(`Locked address ${address}.`);
 }
 
-export async function unlockAddress(address: string, tx: any): Promise<void> {
+export async function unlockAddress(address: string, tx: Prisma.TransactionClient): Promise<void> {
   await tx.allowedAddress.update({
     where: { address },
     data: { isLocked: false },
@@ -56,7 +56,7 @@ export async function unlockAddress(address: string, tx: any): Promise<void> {
   logger.info(`Unlocked address ${address}.`);
 }
 
-export async function addTokenMinted(tokenID: number, collectionAddress: string, toAddress: string, uuid: string, status: string, tx: any): Promise<void> {
+export async function addTokenMinted(tokenID: number, collectionAddress: string, toAddress: string, uuid: string, status: string, tx: Prisma.TransactionClient): Promise<void> {
   await tx.mintedTokens.create({
     data: { tokenID, collectionAddress, toAddress, uuid, status },
   });
@@ -94,7 +94,7 @@ export async function getMaxTokenID(): Promise<number> {
   }
 }
 
-export async function updateUUIDStatus(uuid: string, status: string, tx: any): Promise<void> {
+export async function updateUUIDStatus(uuid: string, status: string, tx: Prisma.TransactionClient): Promise<void> {
   await tx.mintedTokens.updateMany({
     where: { uuid },
     data: { status },
@@ -125,7 +125,10 @@ export async function queryAndCorrectPendingMints(): Promise<void> {
     const pendingMints = await prisma.mintedTokens.findMany({
       where: { status: "pending" },
     });
-    logger.debug(`Pending mints: ${JSON.stringify(pendingMints, null, 2)}`);
+    // Check if there are any pending mints and log them if there are
+    if (pendingMints.length > 0) {
+      logger.debug(`Pending mints: ${JSON.stringify(pendingMints, null, 2)}`);
+    }
     for (const mint of pendingMints) {
       const uuid = mint.uuid;
       const response = await axios.get(serverConfig[environment].mintRequestURL(serverConfig[environment].chainName, serverConfig[environment].collectionAddress, uuid), {

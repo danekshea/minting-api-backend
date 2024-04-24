@@ -40,11 +40,11 @@ export const mintByMintingAPI = async (contractAddress: string, walletAddress: s
     });
 
     logger.info(`Mint request sent with UUID: ${uuid}`);
-    logger.debug("Mint request response:", response);
+    logger.debug("Mint request response:", JSON.stringify(response, null, 2));
 
     return uuid;
   } catch (error) {
-    logger.error("Error sending mint request:", error);
+    logger.error("Error sending mint request:", JSON.stringify(error, null, 2));
     throw error;
   }
 };

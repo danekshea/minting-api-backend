@@ -35,7 +35,7 @@ const serverConfig = {
         endTime: 1719292800,
         maxSupply: 9000,
         enableAllowList: false,
-        maxPerWallet: 15,
+        maxPerWallet: 20,
       },
     ],
   },

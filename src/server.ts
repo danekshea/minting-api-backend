@@ -91,10 +91,13 @@ fastify.post("/mint", async (request: FastifyRequest, reply: FastifyReply) => {
         await setUUID(walletAddress, uuid, tx);
         await lockAddress(walletAddress, tx);
         await addTokenMinted(tokenIDcounter, serverConfig[environment].collectionAddress, walletAddress, uuid, "pending", tx);
-        tokenIDcounter++;
 
         // Send response with wallet address and UUID of the mint
-        const response = { walletAddress, uuid };
+        const response = { tokenID: tokenIDcounter, walletAddress, uuid };
+
+        //Increase token count
+        tokenIDcounter++;
+
         reply.send(response);
       });
     } catch (err) {
@@ -112,10 +115,9 @@ fastify.post("/mint", async (request: FastifyRequest, reply: FastifyReply) => {
   }
 });
 
-// Additional endpoints for configuration and eligibility not commented for brevity
-// Consider adding similar detailed comments to those endpoints
-
+// GET endpoint for retrieving minting phase configurations
 fastify.get("/config", async (request: FastifyRequest, reply: FastifyReply) => {
+  // Map through the mint phases to restructure the data for client consumption
   const mintPhases = serverConfig[environment].mintPhases.map((phase) => ({
     name: phase.name,
     startTime: phase.startTime,
@@ -124,40 +126,38 @@ fastify.get("/config", async (request: FastifyRequest, reply: FastifyReply) => {
     enableAllowList: phase.enableAllowList,
   }));
 
+  // Send the structured mint phases data as a response
   reply.send({ mintPhases });
 });
 
+// GET endpoint to check a user's eligibility to participate in minting
 fastify.get("/eligibility", async (request: FastifyRequest, reply: FastifyReply) => {
-  const prisma = new PrismaClient();
+  // Ensure authorization header is present
   const authorizationHeader = request.headers["authorization"];
-
   if (!authorizationHeader) {
     logger.warn("Missing authorization header");
     reply.status(401).send({ error: "Missing authorization header" });
     return;
   }
 
+  // Remove the 'Bearer ' prefix to extract the token
   const idToken = authorizationHeader.replace("Bearer ", "");
 
   try {
+    // Verify the provided ID token
     await verifyToken(idToken);
     logger.debug("ID token verified successfully");
+    // Decode the token to obtain user-specific data
     const decodedToken = await decodeToken(idToken);
     const walletAddress = decodedToken.payload.passport.zkevm_eth_address;
 
+    // Calculate the current time to check active mint phases
     const currentTime = Math.floor(Date.now() / 1000);
-    const mintPhases = serverConfig[environment].mintPhases;
-
+    // Determine eligibility based on mint phases and allowlist status
     const phaseEligibility = await Promise.all(
-      mintPhases.map(async (phase) => {
+      serverConfig[environment].mintPhases.map(async (phase) => {
         const isActive = currentTime >= phase.startTime && currentTime <= phase.endTime;
-
-        let isEligible = !phase.enableAllowList;
-        if (phase.enableAllowList) {
-          const allowListResult = await isAllowlisted(walletAddress, prisma);
-          isEligible = allowListResult.isAllowed;
-        }
-
+        let isEligible = !phase.enableAllowList || (await isAllowlisted(walletAddress, prisma)).isAllowed;
         return {
           name: phase.name,
           isActive,
@@ -166,11 +166,13 @@ fastify.get("/eligibility", async (request: FastifyRequest, reply: FastifyReply)
       })
     );
 
+    // Send eligibility information as a response
     reply.send({ phases: phaseEligibility });
   } catch (err) {
     logger.warn("Failed to verify ID token:", err);
     reply.status(401).send({ error: "Invalid ID token" });
   } finally {
+    // Always disconnect from the database when done
     await prisma.$disconnect();
   }
 });
