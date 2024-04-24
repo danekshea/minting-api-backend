@@ -38,7 +38,7 @@ if (serverConfig[environment].enableFileLogging) {
 }
 
 const logger = winston.createLogger({
-  level: "info",
+  level: serverConfig[environment].logLevel,
   transports: transportsArray,
 });
 

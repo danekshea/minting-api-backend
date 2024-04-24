@@ -20,6 +20,7 @@ const serverConfig = {
     enableAllowList: true,
     maxTokenSupply: 10000,
     enableFileLogging: true,
+    logLevel: "debug",
     mintPhases: [
       {
         name: "Presale",
@@ -52,6 +53,7 @@ const serverConfig = {
     endTime: 1630000000,
     maxTokenSupply: 10000,
     enableFileLogging: true,
+    logLevel: "debug",
     mintPhases: [
       {
         name: "Presale",
