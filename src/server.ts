@@ -342,6 +342,28 @@ fastify.post("/webhook", async (request, reply) => {
   }
 });
 
+fastify.get("/get-mint-request/:referenceId", async (request: FastifyRequest<{ Params: { referenceId: string } }>, reply: FastifyReply) => {
+  const { referenceId } = request.params;
+
+  try {
+    const response = await axios.get(`https://api.sandbox.immutable.com/v1/chains/${serverConfig[environment].chainName}/collections/${serverConfig[environment].collectionAddress}/nfts/mint-requests/${referenceId}`, {
+      headers: {
+        "x-immutable-api-key": serverConfig[environment].API_KEY,
+      },
+    });
+
+    reply.send(response.data);
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      logger.error("Error querying mint request:", error.message);
+      reply.status(error.response?.status || 500).send({ error: "Failed to query mint request" });
+    } else {
+      logger.error("Unexpected error querying mint request:", error);
+      reply.status(500).send({ error: "An unexpected error occurred" });
+    }
+  }
+});
+
 // Start the server
 const start = async () => {
   try {
