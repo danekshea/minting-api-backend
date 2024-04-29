@@ -12,14 +12,21 @@ generator client {
 model AllowedAddress {
   address   String  @id
   quantityAllowed  Int    @default(0)
-  isLocked  Boolean @default(false)
+  phase    Int
   uuid      String?
+}
+
+model LockedAddress {
+  address   String @id
+  isLocked  Boolean @default(true)
+  lockedAt  DateTime @default(now())
 }
 
 model MintedTokens {
   tokenID   Int    @unique
-  toAddress   String
   collectionAddress String
+  walletAddress   String
+  phase    Int
   uuid     String
   status  String
   createdAt DateTime @default(now())

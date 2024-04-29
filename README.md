@@ -66,6 +66,12 @@ This project is a backend API for doing a free mint on IMX zkEVM.
 
 ## To-Do List
 
+- [ ] Add an endpoint to check UUID IMX API status because publishable key doesn't work
+- [ ] Return a proper response for a tokenID is already minted
+- [ ] Return a proper response for not being in certain allowlist phases etc.
+- [ ] Account for getting a webhook return with a token that hasn't been entered into the mintedTokens DB but has indeed been minted
+- [ ] Add disclaimer about this being a community project
+- [ ] Troubleshoot why all console.log are not showing up in the console with logger.info
 - [ ] Generally type more things like the mint requests etc.
 - [ ] Consider adding batching functions. This will require ways to batch mint requests together, but also a way of checking a UUID not for a single mint but several.
 - [ ] Add ERC1155 support once the minting API is ready

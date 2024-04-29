@@ -2,8 +2,7 @@ const jwt = require("jsonwebtoken");
 const jwkToPem = require("jwk-to-pem");
 const axios = require("axios");
 import { promisify } from "util";
-import { IMX_JWT_KEY_URL } from "./config";
-import { createVerify } from "crypto";
+import serverConfig, { IMX_JWT_KEY_URL, environment } from "./config";
 import path from "path";
 const SnsValidator = require("sns-validator");
 const validator = new SnsValidator();
@@ -73,4 +72,19 @@ export async function getMetadataByTokenId(metadataDir: string, tokenId: string)
     logger.error(`Error loading metadata for token ID ${tokenId}: ${JSON.stringify(error, null, 2)}`);
     return null;
   }
+}
+
+// Function to determine which minting phase a token ID belongs to
+export async function getPhaseForTokenID(tokenID: number): Promise<number | null> {
+  // Check each mint phase to see if the tokenID falls within the startTokenID and endTokenID range
+  for (let i = 0; i < serverConfig[environment].mintPhases.length; i++) {
+    const phase = serverConfig[environment].mintPhases[i];
+    if (tokenID >= phase.startTokenID && tokenID <= phase.endTokenID) {
+      // Return the index of the phase
+      return i;
+    }
+  }
+
+  // Return null if the token ID does not fall within any phase range
+  return null;
 }

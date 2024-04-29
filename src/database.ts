@@ -6,30 +6,14 @@ import axios from "axios";
 
 const prisma = new PrismaClient();
 
-export async function isAllowlisted(address: string, tx: any): Promise<{ isAllowed: boolean; reason?: string }> {
-  const allowedAddress = await tx.allowedAddress.findUnique({ where: { address } });
-
-  if (!allowedAddress) {
-    logger.info(`Address ${address} is not on the allowlist.`);
-    return { isAllowed: false, reason: "Address is not on the allowlist." };
-  } else if (allowedAddress.quantityAllowed === 0) {
-    logger.info(`Address ${address} has no allowance left.`);
-    return { isAllowed: false, reason: "Address has no allowance left." };
-  } else if (allowedAddress.isLocked) {
-    logger.info(`Address ${address} is currently locked.`);
-    return { isAllowed: false, reason: "Address is currently locked." };
-  }
-
-  logger.debug(`Address ${address} is allowlisted and ready to mint.`);
-  return { isAllowed: true };
+export async function isOnAllowlist(address: string, phase: number, tx: Prisma.TransactionClient): Promise<boolean> {
+  const allowedAddress = await tx.allowedAddress.findUnique({ where: { address, phase } });
+  return Boolean(allowedAddress);
 }
 
-export async function setUUID(address: string, uuid: string, tx: Prisma.TransactionClient): Promise<void> {
-  await tx.allowedAddress.update({
-    where: { address },
-    data: { uuid },
-  });
-  logger.debug(`Set UUID ${uuid} for address ${address}.`);
+export async function hasAllowance(address: string, phase: number, tx: Prisma.TransactionClient): Promise<boolean> {
+  const allowedAddress = await tx.allowedAddress.findUnique({ where: { address, phase } });
+  return allowedAddress ? allowedAddress.quantityAllowed > 0 : false;
 }
 
 export async function decreaseQuantityAllowed(address: string, tx: Prisma.TransactionClient): Promise<void> {
@@ -41,31 +25,65 @@ export async function decreaseQuantityAllowed(address: string, tx: Prisma.Transa
 }
 
 export async function lockAddress(address: string, tx: Prisma.TransactionClient): Promise<void> {
-  await tx.allowedAddress.update({
-    where: { address },
-    data: { isLocked: true },
+  await tx.lockedAddress.create({
+    data: { address },
   });
   logger.info(`Locked address ${address}.`);
 }
 
 export async function unlockAddress(address: string, tx: Prisma.TransactionClient): Promise<void> {
-  await tx.allowedAddress.update({
+  await tx.lockedAddress.delete({
     where: { address },
-    data: { isLocked: false },
   });
   logger.info(`Unlocked address ${address}.`);
 }
 
-export async function addTokenMinted(tokenID: number, collectionAddress: string, toAddress: string, uuid: string, status: string, tx: Prisma.TransactionClient): Promise<void> {
-  await tx.mintedTokens.create({
-    data: { tokenID, collectionAddress, toAddress, uuid, status },
-  });
-  logger.info(`Added minted token with ID ${tokenID} for address ${toAddress}.`);
+export async function isAddressLocked(address: string, tx: Prisma.TransactionClient): Promise<boolean> {
+  const lockedAddress = await tx.lockedAddress.findUnique({ where: { address } });
+  return lockedAddress !== null;
 }
 
-export async function getTotalMintedQuantity(): Promise<number> {
+export async function addTokenMinted(tokenID: number, collectionAddress: string, walletAddress: string, phase: number, uuid: string, status: string, tx: Prisma.TransactionClient): Promise<void> {
+  await tx.mintedTokens.create({
+    data: { tokenID, collectionAddress, walletAddress, phase, uuid, status },
+  });
+  logger.info(`Added minted token with ID ${tokenID} for address ${walletAddress}.`);
+}
+
+export async function setUUID(walletAddress: string, uuid: string, tx: Prisma.TransactionClient): Promise<void> {
+  await tx.allowedAddress.update({
+    where: { address: walletAddress },
+    data: { uuid },
+  });
+  logger.info(`Set UUID for address ${walletAddress}.`);
+}
+
+export async function isUUIDAllowList(uuid: string, tx: Prisma.TransactionClient): Promise<boolean> {
+  const result = await tx.allowedAddress.findMany({ where: { uuid } });
+  return Boolean(result);
+}
+
+export async function getPhaseTotalMintedQuantity(phase: number, tx: Prisma.TransactionClient): Promise<number> {
   try {
-    const result = await prisma.mintedTokens.aggregate({
+    const result = await tx.mintedTokens.aggregate({
+      where: {
+        status: { in: ["succeeded", "pending"] },
+        phase: { equals: phase },
+      },
+      _count: { tokenID: true },
+    });
+    const totalMintedQuantity = result._count.tokenID || 0;
+    logger.debug(`Total minted quantity: ${totalMintedQuantity}.`);
+    return totalMintedQuantity;
+  } catch (error) {
+    logger.error(`Error retrieving total minted quantity for succeeded or pending mints: ${JSON.stringify(error, null, 2)}`);
+    return 0;
+  }
+}
+
+export async function getTotalMintedQuantity(tx: Prisma.TransactionClient): Promise<number> {
+  try {
+    const result = await tx.mintedTokens.aggregate({
       where: {
         status: { in: ["succeeded", "pending"] },
       },
@@ -80,10 +98,11 @@ export async function getTotalMintedQuantity(): Promise<number> {
   }
 }
 
-export async function getMaxTokenID(): Promise<number> {
+export async function getPhaseMaxTokenID(phase: number, tx: Prisma.TransactionClient): Promise<number> {
   try {
-    const result = await prisma.mintedTokens.aggregate({
+    const result = await tx.mintedTokens.aggregate({
       _max: { tokenID: true },
+      where: { phase },
     });
     const maxTokenID = result._max.tokenID || 0;
     logger.debug(`Max token ID: ${maxTokenID}.`);
@@ -102,11 +121,11 @@ export async function updateUUIDStatus(uuid: string, status: string, tx: Prisma.
   logger.info(`Updated status of minted tokens with UUID ${uuid} to ${status}.`);
 }
 
-export async function getTokensMintedByWallet(walletAddress: string): Promise<number> {
+export async function getTokensMintedByWallet(walletAddress: string, tx: Prisma.TransactionClient): Promise<number> {
   try {
-    const result = await prisma.mintedTokens.aggregate({
+    const result = await tx.mintedTokens.aggregate({
       where: {
-        toAddress: walletAddress,
+        walletAddress: walletAddress,
         status: { in: ["succeeded", "pending"] },
       },
       _count: { tokenID: true },
@@ -153,5 +172,17 @@ export async function queryAndCorrectPendingMints(): Promise<void> {
     }
   } catch (error) {
     logger.error(`Error checking pending mints: ${JSON.stringify(error, null, 2)}`);
+  }
+}
+
+export async function getTokenQuantityAllowed(address: string, tx: Prisma.TransactionClient): Promise<number> {
+  try {
+    const result = await tx.allowedAddress.findUnique({ where: { address } });
+    const quantityAllowed = result?.quantityAllowed || 0;
+    logger.debug(`Quantity allowed for address ${address}: ${quantityAllowed}.`);
+    return quantityAllowed;
+  } catch (error) {
+    logger.error(`Error retrieving quantity allowed for address ${address}: ${JSON.stringify(error, null, 2)}`);
+    return 0;
   }
 }
