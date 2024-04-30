@@ -23,7 +23,8 @@
     "sns-validator": "^0.3.5",
     "util": "^0.12.5",
     "uuid": "^9.0.1",
-    "winston": "^3.13.0"
+    "winston": "^3.13.0",
+    "winston-daily-rotate-file": "^5.0.0"
   },
   "devDependencies": {
     "@types/node": "^20.12.7",
