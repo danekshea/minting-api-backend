@@ -1,4 +1,36 @@
-type PassportIDToken = {
+// Define a type for individual mint phases
+export interface MintPhase {
+  name: string;
+  startTime: number;
+  endTime: number;
+  startTokenID: number;
+  endTokenID: number;
+  enableAllowList: boolean;
+  maxTokensPerWallet?: number; // Optional since it's not in all phases
+}
+
+// Define a type for the environment configurations
+interface EnvironmentConfig {
+  API_URL: string;
+  API_KEY: string;
+  chainName: string;
+  collectionAddress: string;
+  mintRequestURL: (chainName: string, collectionAddress: string, referenceId: string) => string;
+  allowedTopicArn: string;
+  metadataDir: string;
+  maxTokenSupply?: number; // Optional for generalization, as it might not be in all configs
+  maxTokenSupplyAcrossAllPhases?: number; // Optional for generalization
+  enableFileLogging: boolean;
+  logLevel: string;
+  mintPhases: MintPhase[];
+}
+
+// Define a type for the serverConfig object
+export interface ServerConfig {
+  [key: string]: EnvironmentConfig; // Dynamic keys based on possible environments
+}
+
+export type PassportIDToken = {
   header: { alg: "RS256"; typ: "JWT"; kid: "3aaYytdwwe032s1r3TIr9" };
   payload: {
     passport: {
@@ -24,14 +56,14 @@ type PassportIDToken = {
   signature: string;
 };
 
-interface NFTMetadata {
+export interface NFTMetadata {
   image: string;
   name: string;
   description: string;
   attributes: Attribute[];
 }
 
-interface Attribute {
+export interface Attribute {
   trait_type: string;
   value: string;
 }

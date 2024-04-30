@@ -368,11 +368,10 @@ fastify.get("/get-mint-request/:referenceId", async (request: FastifyRequest<{ P
 const start = async () => {
   try {
     await fastify.listen(3000);
-    logger.info(`Server started successfully.`);
+    logger.info(`[SUCCESS] Server started.`);
 
     // Check and correct pending mints
     await queryAndCorrectPendingMints();
-    logger.info("Pending mints check completed.");
   } catch (err) {
     logger.error(`Error starting server:`, err);
     process.exit(1);

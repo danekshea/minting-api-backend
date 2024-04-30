@@ -8,15 +8,16 @@ const SnsValidator = require("sns-validator");
 const validator = new SnsValidator();
 import fs from "fs";
 import logger from "./logger";
+import { ServerConfig, PassportIDToken, NFTMetadata } from "./types";
 
 //Used with all utils and database functions to ensure logging happens correctly and everything is in a try catch block
 export async function executeWithLogging<T>(operation: () => Promise<T>, description: string): Promise<T> {
   try {
     const result = await operation();
-    logger.debug(`${description}: Success`);
+    logger.debug(`[SUCCESS] ${description}`);
     return result;
   } catch (error: any) {
-    logger.error(`${description}: Failed`, { error });
+    logger.error(`[FAILURE] ${description}`, { error });
     throw new Error(`Error during ${description.toLowerCase()}: ${error.message}`);
   }
 }
@@ -78,4 +79,45 @@ export async function getPhaseForTokenID(tokenID: number): Promise<number | null
     }
     return null;
   }, `Getting phase for token ID ${tokenID}`);
+}
+
+async function checkConfigValidity(config: ServerConfig): Promise<boolean> {
+  return executeWithLogging(async () => {
+    const { mintPhases, maxTokenSupplyAcrossAllPhases } = config;
+
+    let totalTokens = 0;
+    let lastEndTime = 0;
+    let tokenRanges = [];
+
+    for (const phase of mintPhases) {
+      // Check for overlapping phase times
+      if (phase.startTime <= lastEndTime) {
+        throw new Error(`Phase time overlap detected between phases ending at ${lastEndTime} and starting at ${phase.startTime}`);
+      }
+      lastEndTime = phase.endTime;
+
+      // Check for token ID range overlaps
+      for (const range of tokenRanges) {
+        if ((phase.startTokenID <= range.endTokenID && phase.startTokenID >= range.startTokenID) || (phase.endTokenID <= range.endTokenID && phase.endTokenID >= range.startTokenID)) {
+          throw new Error(`Token ID range overlap detected between token IDs ${range.startTokenID}-${range.endTokenID} and ${phase.startTokenID}-${phase.endTokenID}`);
+        }
+      }
+      tokenRanges.push({ startTokenID: phase.startTokenID, endTokenID: phase.endTokenID });
+
+      // Accumulate total token count
+      totalTokens += phase.endTokenID - phase.startTokenID + 1;
+
+      // Check for maxTokensPerWallet when no allowlist is enabled
+      if (!phase.enableAllowList && phase.maxTokensPerWallet === undefined) {
+        throw new Error(`No maxTokensPerWallet defined for phase "${phase.name}" which has no allowlist.`);
+      }
+    }
+
+    // Check if maxTokenSupplyAcrossAllPhases is exceeded
+    if (totalTokens > maxTokenSupplyAcrossAllPhases) {
+      throw new Error(`Total token supply across all phases (${totalTokens}) exceeds the configured maximum (${maxTokenSupplyAcrossAllPhases}).`);
+    }
+
+    return true; // All checks passed
+  }, "Config Validity Check");
 }
