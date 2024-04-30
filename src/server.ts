@@ -330,7 +330,7 @@ fastify.post("/webhook", async (request, reply) => {
             });
           }
         } else {
-          logger.warn("Received notification for an unknown event:", event_name);
+          logger.warn("Received notification for an unknown event:", JSON.stringify(event_name, null, 2));
         }
       } else {
         logger.warn("Invalid signature. Notification denied.");

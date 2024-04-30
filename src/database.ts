@@ -157,11 +157,20 @@ export async function queryAndCorrectPendingMints(): Promise<void> {
       });
       logger.debug(`Checking status of mint with UUID ${uuid}: ${JSON.stringify(response.data, null, 2)}`);
       if (response.data.result[0].status === "succeeded") {
-        await prisma.mintedTokens.updateMany({
-          where: { uuid },
-          data: { status: "succeeded" },
+        // Start the transaction
+        await prisma.$transaction(async (prisma) => {
+          // Update the status of minted tokens
+          await prisma.mintedTokens.updateMany({
+            where: { uuid },
+            data: { status: "succeeded" },
+          });
+
+          // Unlock the wallet address
+          await unlockAddress(mint.walletAddress, prisma);
+
+          // Log the successful mint
+          logger.info(`Mint with UUID ${uuid} succeeded. Updating status.`);
         });
-        logger.info(`Mint with UUID ${uuid} succeeded. Updating status.`);
       } else if (response.data.result[0].status === "failed") {
         await prisma.mintedTokens.updateMany({
           where: { uuid },
