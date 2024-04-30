@@ -1,21 +1,10 @@
 import { PrismaClient, Prisma } from "@prisma/client";
-import logger from "./logger";
 import serverConfig from "./config";
 import { environment } from "./config";
 import axios from "axios";
+import { executeWithLogging } from "./utils";
 
 const prisma = new PrismaClient();
-
-async function executeWithLogging<T>(operation: () => Promise<T>, description: string): Promise<T> {
-  try {
-    const result = await operation();
-    logger.debug(`${description}: Success`);
-    return result;
-  } catch (error: any) {
-    logger.error(`${description}: Failed`, { error });
-    throw new Error(`Error during ${description.toLowerCase()}: ${error.message}`);
-  }
-}
 
 export function isOnAllowlist(address: string, phase: number, tx: Prisma.TransactionClient): Promise<boolean> {
   return executeWithLogging(() => tx.allowedAddress.findUnique({ where: { address, phase } }), `Checking if address ${address} is on allowlist for phase ${phase}`).then((result) => Boolean(result));

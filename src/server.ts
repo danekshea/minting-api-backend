@@ -5,7 +5,7 @@ import { FastifyReply, FastifyRequest } from "fastify";
 import serverConfig from "./config";
 import { environment } from "./config";
 import { mintByMintingAPI } from "./minting";
-import { verifyToken, decodeToken, verifySNSSignature, getMetadataByTokenId, getPhaseForTokenID } from "./utils";
+import { verifyPassportToken, decodePassportToken, verifySNSSignature, getMetadataByTokenId, getPhaseForTokenID } from "./utils";
 import {
   addTokenMinted,
   decreaseQuantityAllowed,
@@ -63,9 +63,9 @@ fastify.post("/mint", async (request: FastifyRequest, reply: FastifyReply) => {
   // Remove 'Bearer ' prefix and verify the ID token
   const idToken = authorizationHeader.replace("Bearer ", "");
   try {
-    await verifyToken(idToken);
+    await verifyPassportToken(idToken);
     logger.debug("ID token verified successfully");
-    const decodedToken = await decodeToken(idToken);
+    const decodedToken = await decodePassportToken(idToken);
     const walletAddress = decodedToken.payload.passport.zkevm_eth_address;
 
     // Conduct transactional operations related to minting
@@ -213,10 +213,10 @@ fastify.get("/eligibility", async (request: FastifyRequest, reply: FastifyReply)
 
   try {
     // Verify the provided ID token
-    await verifyToken(idToken);
+    await verifyPassportToken(idToken);
     logger.debug("ID token verified successfully");
     // Decode the token to obtain user-specific data
-    const decodedToken = await decodeToken(idToken);
+    const decodedToken = await decodePassportToken(idToken);
     const walletAddress = decodedToken.payload.passport.zkevm_eth_address;
 
     // Calculate the current time to check active mint phases
