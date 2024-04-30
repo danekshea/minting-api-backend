@@ -5,7 +5,7 @@ import { FastifyReply, FastifyRequest } from "fastify";
 import serverConfig from "./config";
 import { environment } from "./config";
 import { mintByMintingAPI } from "./minting";
-import { verifyPassportToken, decodePassportToken, verifySNSSignature, getMetadataByTokenId, getPhaseForTokenID } from "./utils";
+import { verifyPassportToken, decodePassportToken, verifySNSSignature, getMetadataByTokenId, getPhaseForTokenID, checkConfigValidity } from "./utils";
 import {
   addTokenMinted,
   decreaseQuantityAllowed,
@@ -367,11 +367,14 @@ fastify.get("/get-mint-request/:referenceId", async (request: FastifyRequest<{ P
 // Start the server
 const start = async () => {
   try {
+    checkConfigValidity(serverConfig[environment]);
+
     await fastify.listen(3000);
-    logger.info(`[SUCCESS] Server started.`);
+    logger.info(`Server started successfully.`);
 
     // Check and correct pending mints
     await queryAndCorrectPendingMints();
+    logger.info("Pending mints check completed.");
   } catch (err) {
     logger.error(`Error starting server:`, err);
     process.exit(1);
