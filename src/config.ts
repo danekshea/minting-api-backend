@@ -1,8 +1,10 @@
 import { config } from "@imtbl/sdk";
 require("dotenv").config();
 
+//config.Environment.SANDBOX or config.Environment.PRODUCTION
 export const environment = config.Environment.SANDBOX;
 
+//Used for verification of the Passport JWTs
 export const IMX_JWT_KEY_URL = "https://auth.immutable.com/.well-known/jwks.json?_gl=1*1g7a0qs*_ga*NDg1NTg3MDI3LjE2ODU1OTY1Mzg.*_ga_4JBHZ7F06X*MTY4ODUyNjkyNy4xNC4wLjE2ODg1MjY5MjcuMC4wLjA.*_ga_7XM4Y7T8YC*MTY4ODUyNjkyNy4yNy4wLjE2ODg1MjY5MjcuMC4wLjA.";
 
 const serverConfig = {
@@ -12,20 +14,17 @@ const serverConfig = {
     chainName: "imtbl-zkevm-testnet",
     collectionAddress: "0x76bedf3f6d486922d77db2e1a43cea4bf9c22ef7",
     mintRequestURL: (chainName: string, collectionAddress: string, referenceId: string) => `https://api.sandbox.immutable.com/v1/chains/${chainName}/collections/${collectionAddress}/nfts/mint-requests/${referenceId}`,
-    allowedTopicArn: "arn:aws:sns:us-east-2:783421985614:*",
-    metadataDir: "tokens/metadata",
-    startTime: 1629913600,
-    endTime: 1719292800,
-    enableAllowList: true,
+    allowedTopicArn: "arn:aws:sns:us-east-2:783421985614:*", //Used for webhook SNS verification
+    metadataDir: "tokens/metadata", //Where the token metadata resides, {filename} will be replaced with the token ID
     maxTokenSupplyAcrossAllPhases: 10000,
-    enableFileLogging: true,
+    enableFileLogging: true, //Should logs be output to files or just console?
     logLevel: "debug",
     mintPhases: [
       {
         name: "Presale",
         startTime: 1629913600,
         endTime: 1714397828,
-        startTokenID: 4,
+        startTokenID: 6,
         endTokenID: 1000,
         enableAllowList: true,
       },
@@ -33,10 +32,10 @@ const serverConfig = {
         name: "Public Sale",
         startTime: 1714397829,
         endTime: 1719292800,
-        startTokenID: 2024,
+        startTokenID: 2027,
         endTokenID: 3000,
         enableAllowList: false,
-        maxTokensPerWallet: 25,
+        maxTokensPerWallet: 5,
       },
     ],
   },
@@ -46,13 +45,10 @@ const serverConfig = {
     chainName: "imtbl-zkevm-mainnet",
     collectionAddress: "0x88b87272649b3495d99b1702f358286b19f8c3da",
     mintRequestURL: (chainName: string, collectionAddress: string, referenceId: string) => `https://api.immutable.com/v1/chains/${chainName}/collections/${collectionAddress}/nfts/mint-requests/${referenceId}`,
-    allowedTopicArn: "arn:aws:sns:us-east-2:362750628221:*",
-    metadataDir: "tokens/metadata",
-    enableAllowList: true,
-    startTime: 1630000000,
-    endTime: 1630000000,
+    allowedTopicArn: "arn:aws:sns:us-east-2:362750628221:*", //Used for webhook SNS verification
+    metadataDir: "tokens/metadata", //Where the token metadata resides, {filename} will be replaced with the token ID
     maxTokenSupply: 10000,
-    enableFileLogging: true,
+    enableFileLogging: true, //Should logs be output to files or just console?
     logLevel: "debug",
     mintPhases: [
       {
