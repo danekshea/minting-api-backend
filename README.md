@@ -70,6 +70,7 @@ This project is a backend API for doing a free mint on IMX zkEVM.
 - [ ] Return a proper response for not being in certain allowlist phases etc.
 - [ ] Account for getting a webhook return with a token that hasn't been entered into the mintedTokens DB but has indeed been minted
 - [ ] Add disclaimer about this being a community project
+- [ ] Consider switching to Pino instead of Winston for logging
 - [ ] Troubleshoot why all console.log are not showing up in the console with logger.info
 - [ ] Add color coding to success or failure in the logs
 - [ ] Generally type more things like the mint requests etc.
