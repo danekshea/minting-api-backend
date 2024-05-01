@@ -86,7 +86,7 @@ fastify.post("/mint/passport", async (request: FastifyRequest, reply: FastifyRep
 });
 
 // GET endpoint for retrieving minting phase configurations
-fastify.get("/config", async (reply: FastifyReply) => {
+fastify.get("/config", async (request: FastifyRequest, reply: FastifyReply) => {
   // Map through the mint phases to restructure the data for client consumption
   const mintPhases = serverConfig[environment].mintPhases.map((phase) => {
     const phaseConfig: any = {
