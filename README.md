@@ -2,6 +2,10 @@
 
 This project is a backend API for doing a free mint on IMX zkEVM.
 
+## Disclaimer
+
+The sample code provided is for reference purposes only and is not officially supported by Immutable. It has undergone best effort testing by Immutable to ensure basic functionality. However, it is essential that you thoroughly test this sample code within your own environment to confirm its functionality and reliability before deploying it in a production setting. Immutable disclaims any liability for any issues that arise due to the use of this sample code. By using this sample code, you agree to perform due diligence in testing and verifying its suitability for your applications.
+
 ## Features
 
 - Uses the Immutable Minting API to ensure that minting is sponsored & transaction life cycle monitoring, nonce management etc. is abstracted.
@@ -69,7 +73,6 @@ This project is a backend API for doing a free mint on IMX zkEVM.
 - [ ] Return a proper response for a tokenID is already minted
 - [ ] Return a proper response for not being in certain allowlist phases etc.
 - [ ] Account for getting a webhook return with a token that hasn't been entered into the mintedTokens DB but has indeed been minted
-- [ ] Add disclaimer about this being a community project
 - [ ] Consider switching to Pino instead of Winston for logging
 - [ ] Troubleshoot why all console.log are not showing up in the console with logger.info
 - [ ] Add color coding to success or failure in the logs
