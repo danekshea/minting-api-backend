@@ -133,3 +133,24 @@ export function checkConfigValidity(config) {
   logger.info("All config checks passed.");
   return true;
 }
+
+export async function checkCurrentMintPhaseIsActive() {
+  try {
+    const currentTime = Math.floor(Date.now() / 1000);
+    if (!serverConfig || !serverConfig[environment].mintPhases) {
+      logger.error("Mint phases configuration is missing.");
+      return { currentPhase: null, currentPhaseIndex: -1 }; // Return null phase and -1 as index if config is missing
+    }
+    const mintPhases = serverConfig[environment].mintPhases;
+    const currentPhaseIndex = mintPhases.findIndex((phase) => currentTime >= phase.startTime && currentTime <= phase.endTime);
+    const currentPhase = mintPhases[currentPhaseIndex];
+    if (currentPhase) {
+      return { currentPhase, currentPhaseIndex: currentPhaseIndex }; // Return both the phase and its index
+    } else {
+      return { currentPhase: null, currentPhaseIndex: -1 }; // Return null and -1 if no active phase
+    }
+  } catch (error) {
+    logger.error(`Error checking mint phases: ${error.message}`);
+    return { currentPhase: null, currentPhaseIndex: -1 }; // Return null and -1 in case of an error
+  }
+}

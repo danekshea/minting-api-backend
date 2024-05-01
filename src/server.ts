@@ -4,8 +4,8 @@ const cors = require("@fastify/cors");
 import { FastifyReply, FastifyRequest } from "fastify";
 import serverConfig from "./config";
 import { environment } from "./config";
-import { mintByMintingAPI } from "./minting";
-import { verifyPassportToken, decodePassportToken, verifySNSSignature, getMetadataByTokenId, getPhaseForTokenID, checkConfigValidity } from "./utils";
+import { mintByMintingAPI, performMint } from "./minting";
+import { verifyPassportToken, decodePassportToken, verifySNSSignature, getMetadataByTokenId, getPhaseForTokenID, checkConfigValidity, checkMintPhase, checkCurrentMintPhaseIsActive } from "./utils";
 import {
   addTokenMinted,
   decreaseQuantityAllowed,
@@ -39,7 +39,7 @@ fastify.register(cors, {
 });
 
 // Define POST endpoint for minting tokens
-fastify.post("/mint", async (request: FastifyRequest, reply: FastifyReply) => {
+fastify.post("/mint/passport", async (request: FastifyRequest, reply: FastifyReply) => {
   const authorizationHeader = request.headers["authorization"];
 
   // Check if the authorization header is present
@@ -49,15 +49,11 @@ fastify.post("/mint", async (request: FastifyRequest, reply: FastifyReply) => {
     return;
   }
 
-  // Validate that the current time is within an active mint phase
-  const currentTime = Math.floor(Date.now() / 1000);
-  const mintPhases = serverConfig[environment].mintPhases;
-  const currentPhaseIndex = mintPhases.findIndex((phase) => currentTime >= phase.startTime && currentTime <= phase.endTime);
-  const currentPhase = mintPhases[currentPhaseIndex];
+  const { currentPhase, currentPhaseIndex } = await checkCurrentMintPhaseIsActive();
   if (!currentPhase) {
     logger.info("No active mint phase. Minting not allowed.");
     reply.status(403).send({ error: "No active mint phase." });
-    return;
+    return null;
   }
 
   // Remove 'Bearer ' prefix and verify the ID token
@@ -70,93 +66,14 @@ fastify.post("/mint", async (request: FastifyRequest, reply: FastifyReply) => {
 
     // Conduct transactional operations related to minting
     try {
-      await prisma.$transaction(async (tx) => {
-        // Check if the wallet address is locked
-        const isLocked = await isAddressLocked(walletAddress, tx);
-        if (isLocked) {
-          logger.info(`Wallet address ${walletAddress} is locked.`);
-          reply.status(403).send({ error: "Wallet address is locked." });
-          return;
-        }
-
-        // Check the minted supply against the maximum limit for the current phase
-        const phaseMintedSupply = await getPhaseTotalMintedQuantity(currentPhaseIndex, tx);
-        if (phaseMintedSupply >= currentPhase.endTokenID - currentPhase.startTokenID + 1) {
-          logger.info(`Maximum supply for the current phase (${currentPhase.name}) has been minted.`);
-          reply.status(403).send({ error: `Maximum supply for the current phase (${currentPhase.name}) has been minted.` });
-          return;
-        }
-
-        // Check the total minted supply against the maximum limit across all phases
-        const totalSupplyMinted = await getTotalMintedQuantity(tx);
-        if (totalSupplyMinted >= serverConfig[environment].maxTokenSupplyAcrossAllPhases) {
-          logger.info(`Maximum supply across all phases has been minted.`);
-          reply.status(403).send({ error: "Maximum supply across all phases has been minted." });
-          return;
-        }
-
-        // Get the current token ID counter for the phase
-        const maxTokenID = await getPhaseMaxTokenID(currentPhaseIndex, tx);
-        if (maxTokenID === 0) {
-          tokenIDcounter = currentPhase.startTokenID;
-        } else {
-          tokenIDcounter = maxTokenID + 1;
-        }
-        logger.debug(`Current token ID counter for the phase: ${tokenIDcounter}`);
-
-        //Check if the allowlist is enabled
-        if (currentPhase.enableAllowList) {
-          // First check if the address is on the allowlist
-          const isAllowlisted = await isOnAllowlist(walletAddress, currentPhaseIndex, tx);
-          if (!isAllowlisted) {
-            const errorReason = "Address is not on the allowlist.";
-            logger.info(`Wallet address ${walletAddress} not allowed to mint in the current phase (${currentPhase.name}): ${errorReason}`);
-            reply.status(403).send({ error: errorReason });
-            return;
-          }
-
-          // Then check if the address has any allowance left
-          const hasMintAllowance = await hasAllowance(walletAddress, currentPhaseIndex, tx);
-          if (!hasMintAllowance) {
-            const errorReason = "Address has no token allowance left.";
-            logger.info(`Wallet address ${walletAddress} not allowed to mint in the current phase (${currentPhase.name}): ${errorReason}`);
-            reply.status(403).send({ error: errorReason });
-            return;
-          }
-        }
-
-        // Check if the wallet has reached its minting limit per wallet for the phase
-        if (currentPhase.maxTokensPerWallet) {
-          const mintedByWallet = await getTokensMintedByWallet(walletAddress, tx);
-          if (mintedByWallet >= currentPhase.maxTokensPerWallet) {
-            logger.info(`Wallet address ${walletAddress} has reached the maximum mints per wallet (${currentPhase.maxTokensPerWallet}) for the current phase (${currentPhase.name}).`);
-            reply.status(403).send({ error: `Maximum mints per wallet (${currentPhase.maxTokensPerWallet}) reached for the current phase (${currentPhase.name}).` });
-            return;
-          }
-        }
-
-        // Retrieve metadata for the token and initiate the minting process
-        const metadata = await getMetadataByTokenId(serverConfig[environment].metadataDir, tokenIDcounter.toString());
-        logger.info(`Initiating mint request for wallet address ${walletAddress}`);
-        const uuid = await mintByMintingAPI(serverConfig[environment].collectionAddress, walletAddress, metadata, tokenIDcounter.toString());
-
-        // Set UUID for the wallet address, lock the address, and record the minted token
-        logger.debug(`Locking wallet address ${walletAddress}`);
-        await lockAddress(walletAddress, tx);
-        if (currentPhase.enableAllowList) {
-          setUUID(walletAddress, uuid, tx);
-        }
-        await addTokenMinted(tokenIDcounter, serverConfig[environment].collectionAddress, walletAddress, currentPhaseIndex, uuid, "pending", tx);
-
-        // Send response with wallet address and UUID of the mint
-        const response = { tokenID: tokenIDcounter, collectionAddress: serverConfig[environment].collectionAddress, walletAddress, uuid };
-
-        reply.send(response);
+      const result = prisma.$transaction(async (tx) => {
+        return await performMint(walletAddress, currentPhase, currentPhaseIndex, tx);
       });
+      reply.send(result);
     } catch (err) {
       // Handle errors that occur during the minting process
-      logger.error(`Error during minting process: ${JSON.stringify(err, null, 2)}`);
-      reply.status(500).send({ error: "An error occurred during the minting process" });
+      logger.error(`Error during minting process: ${err}`);
+      reply.status(500).send({ error: `An error occurred during the minting process: ${err}` });
     }
   } catch (err) {
     // Handle errors related to ID token verification
@@ -169,7 +86,7 @@ fastify.post("/mint", async (request: FastifyRequest, reply: FastifyReply) => {
 });
 
 // GET endpoint for retrieving minting phase configurations
-fastify.get("/config", async (request: FastifyRequest, reply: FastifyReply) => {
+fastify.get("/config", async (reply: FastifyReply) => {
   // Map through the mint phases to restructure the data for client consumption
   const mintPhases = serverConfig[environment].mintPhases.map((phase) => {
     const phaseConfig: any = {
