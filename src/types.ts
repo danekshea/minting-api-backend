@@ -1,3 +1,6 @@
+import { FastifyRequest } from "fastify";
+import { Signature } from "viem";
+
 // Define a type for individual mint phases
 export interface MintPhase {
   name: string;
@@ -22,6 +25,7 @@ interface EnvironmentConfig {
   maxTokenSupplyAcrossAllPhases?: number; // Optional for generalization
   enableFileLogging: boolean;
   logLevel: string;
+  eoaMintMessage: string;
   mintPhases: MintPhase[];
 }
 
@@ -66,4 +70,11 @@ export interface NFTMetadata {
 export interface Attribute {
   trait_type: string;
   value: string;
+}
+
+export interface eoaMintRequest extends FastifyRequest {
+  body: {
+    signature: `0x${string}` | Uint8Array | Signature;
+    // Add other properties as necessary
+  };
 }

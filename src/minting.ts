@@ -128,4 +128,6 @@ export async function performMint(walletAddress: string, currentPhase, currentPh
 
   // Send response with wallet address and UUID of the mint
   const response = { tokenID: tokenIDcounter, collectionAddress: serverConfig[environment].collectionAddress, walletAddress, uuid };
+
+  return response;
 }

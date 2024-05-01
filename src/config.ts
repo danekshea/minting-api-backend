@@ -20,6 +20,7 @@ const serverConfig: ServerConfig = {
     maxTokenSupplyAcrossAllPhases: 10000,
     enableFileLogging: true, //Should logs be output to files or just console?
     logLevel: "debug",
+    eoaMintMessage: "Sign this message to verify your wallet address", //The message an EOA signs to verify their wallet address and mint
     mintPhases: [
       {
         name: "Presale",
@@ -36,7 +37,7 @@ const serverConfig: ServerConfig = {
         startTokenID: 2027,
         endTokenID: 3000,
         enableAllowList: false,
-        maxTokensPerWallet: 5,
+        maxTokensPerWallet: 25,
       },
     ],
   },
@@ -51,6 +52,7 @@ const serverConfig: ServerConfig = {
     maxTokenSupply: 10000,
     enableFileLogging: true, //Should logs be output to files or just console?
     logLevel: "debug",
+    eoaMintMessage: "Sign this message to verify your wallet address", //The message an EOA signs to verify their wallet address and mint
     mintPhases: [
       {
         name: "Presale",

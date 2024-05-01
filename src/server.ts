@@ -26,10 +26,15 @@ import {
 import { PrismaClient } from "@prisma/client";
 import axios from "axios";
 import logger from "./logger";
+import { verify } from "crypto";
+import { eoaMintRequest } from "./types";
+import { recoverMessageAddress, verifyMessage } from "viem";
+import { toHex } from "viem/utils";
+import { keccak256 } from "ethereum-cryptography/keccak";
+import { utf8ToBytes } from "ethereum-cryptography/utils";
 
 // Initialize Prisma Client for database interactions
 const prisma = new PrismaClient();
-let tokenIDcounter = 0;
 
 // Enable CORS with specified options for API security and flexibility
 fastify.register(cors, {
@@ -66,14 +71,14 @@ fastify.post("/mint/passport", async (request: FastifyRequest, reply: FastifyRep
 
     // Conduct transactional operations related to minting
     try {
-      const result = prisma.$transaction(async (tx) => {
+      const result = await prisma.$transaction(async (tx) => {
         return await performMint(walletAddress, currentPhase, currentPhaseIndex, tx);
       });
       reply.send(result);
     } catch (err) {
       // Handle errors that occur during the minting process
       logger.error(`Error during minting process: ${err}`);
-      reply.status(500).send({ error: `An error occurred during the minting process: ${err}` });
+      reply.status(500).send({ error: `${err}` });
     }
   } catch (err) {
     // Handle errors related to ID token verification
@@ -81,6 +86,53 @@ fastify.post("/mint/passport", async (request: FastifyRequest, reply: FastifyRep
     reply.status(401).send({ error: "Invalid ID token" });
   } finally {
     // Ensure database connection is closed
+    await prisma.$disconnect();
+  }
+});
+
+// Define POST endpoint for minting tokens
+fastify.post("/mint/eoa", async (request: eoaMintRequest, reply: FastifyReply) => {
+  const { signature } = request.body;
+  const message = serverConfig[environment].eoaMintMessage;
+
+  // Check if a mint phase is currently active
+  const { currentPhase, currentPhaseIndex } = await checkCurrentMintPhaseIsActive();
+  if (!currentPhase) {
+    logger.info("No active mint phase. Minting not allowed.");
+    reply.status(403).send({ error: "No active mint phase." });
+    return;
+  }
+
+  // Attempt to recover wallet address from the signature
+  let walletAddress: `0x${string}`;
+  try {
+    walletAddress = await recoverMessageAddress({ message, signature });
+  } catch (error) {
+    logger.warn(`Failed to recover wallet address: ${error}`);
+    reply.status(401).send({ error: "Failed to verify signature." });
+    return;
+  }
+
+  // Verify the recovered address with the message and signature
+  try {
+    await verifyMessage({ address: walletAddress, message, signature });
+  } catch (error) {
+    logger.warn(`Signature verification failed: ${error}`);
+    reply.status(401).send({ error: "Invalid signature." });
+    return;
+  }
+
+  // Perform the minting process within a transaction
+  try {
+    const result = await prisma.$transaction(async (tx) => {
+      return performMint(walletAddress, currentPhase, currentPhaseIndex, tx);
+    });
+    reply.send(result);
+  } catch (error) {
+    logger.error(`Error during minting process: ${error}`);
+    reply.status(500).send({ error: `${error}` });
+  } finally {
+    // Disconnect from the database once processing is complete
     await prisma.$disconnect();
   }
 });
@@ -280,6 +332,10 @@ fastify.get("/get-mint-request/:referenceId", async (request: FastifyRequest<{ P
       reply.status(500).send({ error: "An unexpected error occurred" });
     }
   }
+});
+
+fastify.get("/get-eoa-mint-message", async (request: FastifyRequest, reply: FastifyReply) => {
+  reply.send({ serverConfig: serverConfig[environment].eoaMintMessage });
 });
 
 // Start the server

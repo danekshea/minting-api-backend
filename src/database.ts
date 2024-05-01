@@ -149,38 +149,42 @@ export async function queryAndCorrectPendingMints(): Promise<void> {
       logger.debug(`Pending mints: ${JSON.stringify(pendingMints, null, 2)}`);
     }
     for (const mint of pendingMints) {
-      const uuid = mint.uuid;
-      const response = await axios.get(serverConfig[environment].mintRequestURL(serverConfig[environment].chainName, serverConfig[environment].collectionAddress, uuid), {
-        headers: {
-          "x-immutable-api-key": serverConfig[environment].API_KEY,
-        },
-      });
-      logger.debug(`Checking status of mint with UUID ${uuid}: ${JSON.stringify(response.data, null, 2)}`);
-      if (response.data.result[0].status === "succeeded") {
-        // Start the transaction
-        await prisma.$transaction(async (prisma) => {
-          // Update the status of minted tokens
+      try {
+        const uuid = mint.uuid;
+        const response = await axios.get(serverConfig[environment].mintRequestURL(serverConfig[environment].chainName, serverConfig[environment].collectionAddress, uuid), {
+          headers: {
+            "x-immutable-api-key": serverConfig[environment].API_KEY,
+          },
+        });
+        logger.debug(`Checking status of mint with UUID ${uuid}: ${JSON.stringify(response.data, null, 2)}`);
+
+        if (response.data.result[0].status === "succeeded") {
+          await prisma.$transaction(async (prisma) => {
+            // Update the status of minted tokens
+            await prisma.mintedTokens.updateMany({
+              where: { uuid },
+              data: { status: "succeeded" },
+            });
+
+            // Unlock the wallet address
+            await unlockAddress(mint.walletAddress, prisma);
+
+            // Log the successful mint
+            logger.info(`Mint with UUID ${uuid} succeeded. Updating status.`);
+          });
+        } else if (response.data.result[0].status === "failed") {
           await prisma.mintedTokens.updateMany({
             where: { uuid },
-            data: { status: "succeeded" },
+            data: { status: "failed" },
           });
-
-          // Unlock the wallet address
-          await unlockAddress(mint.walletAddress, prisma);
-
-          // Log the successful mint
-          logger.info(`Mint with UUID ${uuid} succeeded. Updating status.`);
-        });
-      } else if (response.data.result[0].status === "failed") {
-        await prisma.mintedTokens.updateMany({
-          where: { uuid },
-          data: { status: "failed" },
-        });
-        logger.info(`Mint with UUID ${uuid} failed. Updating status.`);
+          logger.info(`Mint with UUID ${uuid} failed. Updating status.`);
+        }
+      } catch (error) {
+        logger.error(`Error processing mint with UUID ${mint.uuid}: ${JSON.stringify(error, null, 2)}`);
       }
     }
   } catch (error) {
-    logger.error(`Error checking pending mints: ${JSON.stringify(error, null, 2)}`);
+    logger.error(`Error fetching pending mints: ${JSON.stringify(error, null, 2)}`);
   }
 }
 
