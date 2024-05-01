@@ -75,21 +75,6 @@ export async function getMetadataByTokenId(metadataDir: string, tokenId: string)
   }
 }
 
-// Function to determine which minting phase a token ID belongs to
-export async function getPhaseForTokenID(tokenID: number): Promise<number | null> {
-  // Check each mint phase to see if the tokenID falls within the startTokenID and endTokenID range
-  for (let i = 0; i < serverConfig[environment].mintPhases.length; i++) {
-    const phase = serverConfig[environment].mintPhases[i];
-    if (tokenID >= phase.startTokenID && tokenID <= phase.endTokenID) {
-      // Return the index of the phase
-      return i;
-    }
-  }
-
-  // Return null if the token ID does not fall within any phase range
-  return null;
-}
-
 export function checkConfigValidity(config) {
   const { mintPhases, maxTokenSupplyAcrossAllPhases } = config;
 

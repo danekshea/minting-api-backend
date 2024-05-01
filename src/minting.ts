@@ -78,17 +78,25 @@ export async function performMint(walletAddress: string, currentPhase, currentPh
   // Determine the token ID counter for the current phase
   const maxTokenID = await getPhaseMaxTokenID(currentPhaseIndex, tx);
   let tokenIDcounter;
+
   if (maxTokenID === 0) {
     if (currentPhase.enableTokenIDRollOver && currentPhaseIndex > 0) {
       const previousPhaseMaxTokenID = await getPhaseMaxTokenID(currentPhaseIndex - 1, tx);
+      if (previousPhaseMaxTokenID === 0) {
+        throw new Error(`No existing max token ID found for the previous phase (${currentPhaseIndex - 1}) and token rollover is enabled.`);
+      }
       tokenIDcounter = previousPhaseMaxTokenID + 1;
     } else {
       // As per configuration validation, startTokenID should always be defined when not using enableTokenIDRollOver
+      if (!currentPhase.startTokenID) {
+        throw new Error(`startTokenID is not defined for phase ${currentPhaseIndex} and token rollover is not enabled.`);
+      }
       tokenIDcounter = currentPhase.startTokenID;
     }
   } else {
     tokenIDcounter = maxTokenID + 1;
   }
+
   logger.debug(`Current token ID counter for the phase: ${tokenIDcounter}`);
 
   // Perform allowance and list checks if applicable

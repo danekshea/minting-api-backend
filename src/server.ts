@@ -5,10 +5,11 @@ import { FastifyReply, FastifyRequest } from "fastify";
 import serverConfig from "./config";
 import { environment } from "./config";
 import { performMint } from "./minting";
-import { verifyPassportToken, decodePassportToken, verifySNSSignature, getMetadataByTokenId, getPhaseForTokenID, checkConfigValidity, checkCurrentMintPhaseIsActive } from "./utils";
+import { verifyPassportToken, decodePassportToken, verifySNSSignature, getMetadataByTokenId, checkConfigValidity, checkCurrentMintPhaseIsActive } from "./utils";
 import {
   addTokenMinted,
   decreaseQuantityAllowed,
+  getPhaseForTokenID,
   getPhaseMaxTokenID,
   getPhaseTotalMintedQuantity,
   getTokenQuantityAllowed,
@@ -270,16 +271,14 @@ fastify.post("/webhook", async (request, reply) => {
         const message = JSON.parse(Message);
         const { event_name } = message;
         const { reference_id, token_id, status, owner_address } = message.data;
-
         if (event_name === "imtbl_zkevm_mint_request_updated") {
           logger.info("Received mint request update notification:");
           console.log(message);
-
           if (status === "succeeded") {
             logger.info(`Mint request ${reference_id} succeeded for owner address ${owner_address}`);
-            const mintPhase = await getPhaseForTokenID(token_id);
             await prisma.$transaction(async (tx) => {
               await unlockAddress(owner_address, tx);
+              const mintPhase = await getPhaseForTokenID(parseInt(token_id), tx);
               if (mintPhase !== null && serverConfig[environment].mintPhases[mintPhase].enableAllowList) {
                 await decreaseQuantityAllowed(owner_address, tx);
               }

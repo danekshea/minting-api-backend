@@ -113,6 +113,26 @@ export async function getPhaseMaxTokenID(phase: number, tx: Prisma.TransactionCl
   }
 }
 
+export async function getPhaseForTokenID(tokenID: number, tx: Prisma.TransactionClient): Promise<number | null> {
+  try {
+    const token = await tx.mintedTokens.findUnique({
+      where: { tokenID },
+      select: { phase: true },
+    });
+
+    if (token) {
+      logger.info(`Token ID ${tokenID} belongs to phase ${token.phase}`);
+      return token.phase;
+    } else {
+      logger.warn(`No token found with ID ${tokenID}`);
+      return null;
+    }
+  } catch (error) {
+    logger.error(`Error retrieving phase for token ID ${tokenID}: ${JSON.stringify(error, null, 2)}`);
+    return null;
+  }
+}
+
 export async function updateUUIDStatus(uuid: string, status: string, tx: Prisma.TransactionClient): Promise<void> {
   await tx.mintedTokens.updateMany({
     where: { uuid },
