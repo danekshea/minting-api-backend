@@ -1,18 +1,17 @@
 import { FastifyRequest } from "fastify";
-import { Signature } from "viem";
 
-// Define a type for individual mint phases
 export interface MintPhase {
   name: string;
   startTime: number;
   endTime: number;
-  startTokenID: number;
-  endTokenID: number;
+  startTokenID?: number; // Optional since enableTokenIDRollOver may negate its necessity
+  endTokenID?: number; // Optional if maxTokenSupply is used with enableTokenIDRollOver
   enableAllowList: boolean;
+  enableTokenIDRollOver?: boolean; // Optional since it's not in all phases
   maxTokensPerWallet?: number; // Optional since it's not in all phases
+  maxTokenSupply?: number; // Optional for phases with enableTokenIDRollOver
 }
 
-// Define a type for the environment configurations
 interface EnvironmentConfig {
   API_URL: string;
   API_KEY: string;
@@ -21,7 +20,6 @@ interface EnvironmentConfig {
   mintRequestURL: (chainName: string, collectionAddress: string, referenceId: string) => string;
   allowedTopicArn: string;
   metadataDir: string;
-  maxTokenSupply?: number; // Optional for generalization, as it might not be in all configs
   maxTokenSupplyAcrossAllPhases?: number; // Optional for generalization
   enableFileLogging: boolean;
   logLevel: string;
@@ -29,7 +27,6 @@ interface EnvironmentConfig {
   mintPhases: MintPhase[];
 }
 
-// Define a type for the serverConfig object
 export interface ServerConfig {
   [key: string]: EnvironmentConfig; // Dynamic keys based on possible environments
 }

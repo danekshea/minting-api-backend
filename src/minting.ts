@@ -3,7 +3,7 @@ import { v4 as uuidv4 } from "uuid";
 import serverConfig from "./config";
 import { environment } from "./config";
 import logger from "./logger";
-import { addTokenMinted, getPhaseMaxTokenID, getPhaseTotalMintedQuantity, getTokensMintedByWallet, getTotalMintedQuantity, hasAllowance, isAddressLocked, isOnAllowlist, lockAddress, setUUID } from "./database";
+import { addTokenMinted, calculateMaxPhaseSupply, getPhaseMaxTokenID, getPhaseTotalMintedQuantity, getTokensMintedByWallet, getTotalMintedQuantity, hasAllowance, isAddressLocked, isOnAllowlist, lockAddress, setUUID } from "./database";
 import { getMetadataByTokenId } from "./utils";
 
 export const mintByMintingAPI = async (contractAddress: string, walletAddress: string, metadata: NFTMetadata | null, tokenID?: string): Promise<string> => {
@@ -60,9 +60,10 @@ export async function performMint(walletAddress: string, currentPhase, currentPh
     throw new Error("Wallet address is locked.");
   }
 
-  // Check the minted supply against the maximum limit for the current phase
+  // Check the minted supply against the maximum limit for the current phase using adjusted supply calculation
+  const maxPhaseSupply = await calculateMaxPhaseSupply(currentPhase, currentPhaseIndex, tx);
   const phaseMintedSupply = await getPhaseTotalMintedQuantity(currentPhaseIndex, tx);
-  if (phaseMintedSupply >= currentPhase.endTokenID - currentPhase.startTokenID + 1) {
+  if (phaseMintedSupply >= maxPhaseSupply) {
     logger.info(`Maximum supply for the current phase (${currentPhase.name}) has been minted.`);
     throw new Error(`Maximum supply for the current phase (${currentPhase.name}) has been minted.`);
   }
@@ -74,33 +75,34 @@ export async function performMint(walletAddress: string, currentPhase, currentPh
     throw new Error("Maximum supply across all phases has been minted.");
   }
 
-  // Get the current token ID counter for the phase
+  // Determine the token ID counter for the current phase
   const maxTokenID = await getPhaseMaxTokenID(currentPhaseIndex, tx);
   let tokenIDcounter;
   if (maxTokenID === 0) {
-    tokenIDcounter = currentPhase.startTokenID;
+    if (currentPhase.enableTokenIDRollOver && currentPhaseIndex > 0) {
+      const previousPhaseMaxTokenID = await getPhaseMaxTokenID(currentPhaseIndex - 1, tx);
+      tokenIDcounter = previousPhaseMaxTokenID + 1;
+    } else {
+      // As per configuration validation, startTokenID should always be defined when not using enableTokenIDRollOver
+      tokenIDcounter = currentPhase.startTokenID;
+    }
   } else {
     tokenIDcounter = maxTokenID + 1;
   }
   logger.debug(`Current token ID counter for the phase: ${tokenIDcounter}`);
 
-  //Check if the allowlist is enabled
+  // Perform allowance and list checks if applicable
   if (currentPhase.enableAllowList) {
-    // First check if the address is on the allowlist
     const isAllowlisted = await isOnAllowlist(walletAddress, currentPhaseIndex, tx);
     if (!isAllowlisted) {
-      const errorReason = "Address is not on the allowlist.";
-      logger.info(`Wallet address ${walletAddress} not allowed to mint in the current phase (${currentPhase.name}): ${errorReason}`);
-      throw new Error(`Wallet address ${walletAddress} not allowed to mint in the current phase (${currentPhase.name}): ${errorReason}`);
+      logger.info(`Wallet address ${walletAddress} not allowed to mint in the current phase (${currentPhase.name}): Address is not on the allowlist.`);
+      throw new Error(`Wallet address ${walletAddress} not allowed to mint in the current phase (${currentPhase.name}): Address is not on the allowlist.`);
     }
 
-    // Then check if the address has any allowance left
     const hasMintAllowance = await hasAllowance(walletAddress, currentPhaseIndex, tx);
     if (!hasMintAllowance) {
-      const errorReason = "Address has no token allowance left.";
-      logger.info(`Wallet address ${walletAddress} not allowed to mint in the current phase (${currentPhase.name}): ${errorReason}`);
-      throw new Error(`Wallet address ${walletAddress} not allowed to mint in the current phase (${currentPhase.name}): ${errorReason}`);
-      return;
+      logger.info(`Wallet address ${walletAddress} has no token allowance left.`);
+      throw new Error(`Wallet address ${walletAddress} not allowed to mint in the current phase (${currentPhase.name}): No token allowance left.`);
     }
   }
 
@@ -115,19 +117,15 @@ export async function performMint(walletAddress: string, currentPhase, currentPh
 
   // Retrieve metadata for the token and initiate the minting process
   const metadata = await getMetadataByTokenId(serverConfig[environment].metadataDir, tokenIDcounter.toString());
-  logger.info(`Initiating mint request for wallet address ${walletAddress}`);
   const uuid = await mintByMintingAPI(serverConfig[environment].collectionAddress, walletAddress, metadata, tokenIDcounter.toString());
 
-  // Set UUID for the wallet address, lock the address, and record the minted token
-  logger.debug(`Locking wallet address ${walletAddress}`);
+  // Lock the address and record the minted token
   await lockAddress(walletAddress, tx);
   if (currentPhase.enableAllowList) {
-    setUUID(walletAddress, uuid, tx);
+    await setUUID(walletAddress, uuid, tx);
   }
   await addTokenMinted(tokenIDcounter, serverConfig[environment].collectionAddress, walletAddress, currentPhaseIndex, uuid, "pending", tx);
 
   // Send response with wallet address and UUID of the mint
-  const response = { tokenID: tokenIDcounter, collectionAddress: serverConfig[environment].collectionAddress, walletAddress, uuid };
-
-  return response;
+  return { tokenID: tokenIDcounter, collectionAddress: serverConfig[environment].collectionAddress, walletAddress, uuid };
 }

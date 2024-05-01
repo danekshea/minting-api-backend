@@ -199,3 +199,39 @@ export async function getTokenQuantityAllowed(address: string, tx: Prisma.Transa
     return 0;
   }
 }
+
+// Define the maximum supply limit for the current phase based on configuration
+export async function calculateMaxPhaseSupply(currentPhase, currentPhaseIndex, tx) {
+  let maxPhaseSupply;
+  if (currentPhase.enableTokenIDRollOver) {
+    if (currentPhase.maxTokenSupply) {
+      maxPhaseSupply = currentPhase.maxTokenSupply;
+    } else if (currentPhase.endTokenID) {
+      // Use endTokenID to calculate the max supply by subtracting the maxTokenID from the previous phase
+      const previousPhaseMaxTokenID = currentPhaseIndex > 0 ? await getPhaseMaxTokenID(currentPhaseIndex - 1, tx) : 0;
+      maxPhaseSupply = currentPhase.endTokenID - previousPhaseMaxTokenID;
+    } else {
+      throw new Error(`Configuration error: Neither maxTokenSupply nor endTokenID are defined for phase "${currentPhase.name}" with enableTokenIDRollOver enabled.`);
+    }
+  } else {
+    // If enableTokenIDRollOver is not true, calculate from startTokenID and endTokenID
+    if (currentPhase.startTokenID !== undefined && currentPhase.endTokenID !== undefined) {
+      maxPhaseSupply = currentPhase.endTokenID - currentPhase.startTokenID + 1;
+    } else {
+      throw new Error(`Configuration error: Both startTokenID and endTokenID must be defined for phase "${currentPhase.name}" when enableTokenIDRollOver is not used.`);
+    }
+  }
+  return maxPhaseSupply;
+}
+
+// Use this function in your minting check
+export async function checkMintingLimit(currentPhase, currentPhaseIndex, tx) {
+  const maxPhaseSupply = await calculateMaxPhaseSupply(currentPhase, currentPhaseIndex, tx);
+
+  // Check the minted supply against the maximum limit for the current phase
+  const phaseMintedSupply = await getPhaseTotalMintedQuantity(currentPhaseIndex, tx);
+  if (phaseMintedSupply >= maxPhaseSupply) {
+    logger.info(`Maximum supply for the current phase (${currentPhase.name}) has been minted.`);
+    throw new Error(`Maximum supply for the current phase (${currentPhase.name}) has been minted.`);
+  }
+}

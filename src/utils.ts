@@ -97,25 +97,54 @@ export function checkConfigValidity(config) {
   let lastEndTime = 0;
   let tokenRanges = [];
 
-  for (const phase of mintPhases) {
+  for (let i = 0; i < mintPhases.length; i++) {
+    const phase = mintPhases[i];
+
+    // Check for enableTokenIDRollOver conditions
+    if (phase.enableTokenIDRollOver) {
+      if (i === 0) {
+        logger.error("enableTokenIDRollOver cannot be used in the first phase.");
+        return false;
+      }
+      if (phase.startTokenID !== undefined) {
+        logger.error("startTokenID cannot be defined when enableTokenIDRollOver is true.");
+        return false;
+      }
+      if (phase.maxTokenSupply !== undefined && phase.endTokenID !== undefined) {
+        logger.error("Cannot define both maxTokenSupply and endTokenID when enableTokenIDRollOver is true.");
+        return false;
+      }
+      if (!phase.maxTokenSupply && !phase.endTokenID) {
+        logger.error("Either maxTokenSupply or endTokenID must be defined if enableTokenIDRollOver is true.");
+        return false;
+      }
+    } else {
+      if (phase.startTokenID === undefined || phase.endTokenID === undefined) {
+        logger.error(`Both startTokenID and endTokenID must be defined for phase "${phase.name}" when enableTokenIDRollOver is not used.`);
+        return false;
+      }
+      if (phase.maxTokenSupply !== undefined) {
+        logger.error("maxTokenSupply can only be defined when enableTokenIDRollOver is true.");
+        return false;
+      }
+      // Check for token ID range overlaps
+      for (const range of tokenRanges) {
+        if ((phase.startTokenID <= range.endTokenID && phase.startTokenID >= range.startTokenID) || (phase.endTokenID <= range.endTokenID && phase.endTokenID >= range.startTokenID)) {
+          logger.error(`Token ID range overlap detected between token IDs ${range.startTokenID}-${range.endTokenID} and ${phase.startTokenID}-${phase.endTokenID}`);
+          return false;
+        }
+      }
+      tokenRanges.push({ startTokenID: phase.startTokenID, endTokenID: phase.endTokenID });
+      // Accumulate total token count
+      totalTokens += phase.endTokenID - phase.startTokenID + 1;
+    }
+
     // Check for overlapping phase times
     if (phase.startTime <= lastEndTime) {
       logger.error(`Phase time overlap detected between phases ending at ${lastEndTime} and starting at ${phase.startTime}`);
       return false;
     }
     lastEndTime = phase.endTime;
-
-    // Check for token ID range overlaps
-    for (const range of tokenRanges) {
-      if ((phase.startTokenID <= range.endTokenID && phase.startTokenID >= range.startTokenID) || (phase.endTokenID <= range.endTokenID && phase.endTokenID >= range.startTokenID)) {
-        logger.error(`Token ID range overlap detected between token IDs ${range.startTokenID}-${range.endTokenID} and ${phase.startTokenID}-${phase.endTokenID}`);
-        return false;
-      }
-    }
-    tokenRanges.push({ startTokenID: phase.startTokenID, endTokenID: phase.endTokenID });
-
-    // Accumulate total token count
-    totalTokens += phase.endTokenID - phase.startTokenID + 1;
 
     // Check for maxTokensPerWallet when no allowlist is enabled
     if (!phase.enableAllowList && phase.maxTokensPerWallet === undefined) {
@@ -125,7 +154,7 @@ export function checkConfigValidity(config) {
   }
 
   // Check if maxTokenSupplyAcrossAllPhases is exceeded
-  if (totalTokens > maxTokenSupplyAcrossAllPhases) {
+  if (maxTokenSupplyAcrossAllPhases !== undefined && totalTokens > maxTokenSupplyAcrossAllPhases) {
     logger.error(`Total token supply across all phases (${totalTokens}) exceeds the configured maximum (${maxTokenSupplyAcrossAllPhases}).`);
     return false;
   }

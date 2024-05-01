@@ -4,8 +4,8 @@ const cors = require("@fastify/cors");
 import { FastifyReply, FastifyRequest } from "fastify";
 import serverConfig from "./config";
 import { environment } from "./config";
-import { mintByMintingAPI, performMint } from "./minting";
-import { verifyPassportToken, decodePassportToken, verifySNSSignature, getMetadataByTokenId, getPhaseForTokenID, checkConfigValidity, checkMintPhase, checkCurrentMintPhaseIsActive } from "./utils";
+import { performMint } from "./minting";
+import { verifyPassportToken, decodePassportToken, verifySNSSignature, getMetadataByTokenId, getPhaseForTokenID, checkConfigValidity, checkCurrentMintPhaseIsActive } from "./utils";
 import {
   addTokenMinted,
   decreaseQuantityAllowed,
@@ -26,12 +26,8 @@ import {
 import { PrismaClient } from "@prisma/client";
 import axios from "axios";
 import logger from "./logger";
-import { verify } from "crypto";
 import { eoaMintRequest } from "./types";
 import { recoverMessageAddress, verifyMessage } from "viem";
-import { toHex } from "viem/utils";
-import { keccak256 } from "ethereum-cryptography/keccak";
-import { utf8ToBytes } from "ethereum-cryptography/utils";
 
 // Initialize Prisma Client for database interactions
 const prisma = new PrismaClient();
@@ -341,17 +337,21 @@ fastify.get("/get-eoa-mint-message", async (request: FastifyRequest, reply: Fast
 // Start the server
 const start = async () => {
   try {
-    checkConfigValidity(serverConfig[environment]);
+    if (!checkConfigValidity(serverConfig[environment])) {
+      throw new Error("Invalid server configuration. Exiting.");
+    }
 
     await fastify.listen(3000);
-    logger.info(`Server started successfully.`);
+    logger.info(`Server started successfully on port 3000.`);
 
     // Check and correct pending mints
     await queryAndCorrectPendingMints();
     logger.info("Pending mints check completed.");
   } catch (err) {
-    logger.error(`Error starting server:`, err);
+    logger.error(`Error starting server: ${err.message}`);
+    // Optionally, you might want to handle specific errors differently here
     process.exit(1);
   }
 };
+
 start();

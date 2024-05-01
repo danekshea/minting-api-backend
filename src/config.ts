@@ -26,17 +26,18 @@ const serverConfig: ServerConfig = {
         name: "Presale",
         startTime: 1629913600,
         endTime: 1714397828,
-        startTokenID: 6,
-        endTokenID: 1000,
+        startTokenID: 5000,
+        endTokenID: 5010,
         enableAllowList: true,
       },
       {
         name: "Public Sale",
         startTime: 1714397829,
         endTime: 1719292800,
-        startTokenID: 2027,
-        endTokenID: 3000,
-        enableAllowList: false,
+        endTokenID: 5020,
+        maxTokenSupply: 10000,
+        enableTokenIDRollOver: true,
+        enableAllowList: true,
         maxTokensPerWallet: 25,
       },
     ],
@@ -49,7 +50,6 @@ const serverConfig: ServerConfig = {
     mintRequestURL: (chainName: string, collectionAddress: string, referenceId: string) => `https://api.immutable.com/v1/chains/${chainName}/collections/${collectionAddress}/nfts/mint-requests/${referenceId}`,
     allowedTopicArn: "arn:aws:sns:us-east-2:362750628221:*", //Used for webhook SNS verification
     metadataDir: "tokens/metadata", //Where the token metadata resides, {filename} will be replaced with the token ID
-    maxTokenSupply: 10000,
     enableFileLogging: true, //Should logs be output to files or just console?
     logLevel: "debug",
     eoaMintMessage: "Sign this message to verify your wallet address", //The message an EOA signs to verify their wallet address and mint
