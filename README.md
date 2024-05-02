@@ -70,6 +70,7 @@ The sample code provided is for reference purposes only and is not officially su
 
 ## To-Do List
 
+- [ ] Make sure addresses are lowercased before entering DB or when coming out
 - [ ] Return a proper response for a tokenID is already minted
 - [ ] Return a proper response for not being in certain allowlist phases etc.
 - [ ] Account for getting a webhook return with a token that hasn't been entered into the mintedTokens DB but has indeed been minted

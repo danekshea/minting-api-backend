@@ -25,14 +25,14 @@ const serverConfig: ServerConfig = {
       {
         name: "Guaranteed",
         startTime: 1629913600,
-        endTime: 1714570314,
+        endTime: 1714623711,
         startTokenID: 6030,
         endTokenID: 6040,
         enableAllowList: true,
       },
       {
         name: "Waitlist",
-        startTime: 1714570315,
+        startTime: 1714623712,
         endTime: 1719292800,
         enableTokenIDRollOver: true,
         enableAllowList: true,
