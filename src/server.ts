@@ -5,22 +5,19 @@ import { FastifyReply, FastifyRequest } from "fastify";
 import serverConfig from "./config";
 import { environment } from "./config";
 import { performMint } from "./minting";
-import { verifyPassportToken, decodePassportToken, verifySNSSignature, getMetadataByTokenId, checkConfigValidity, checkCurrentMintPhaseIsActive } from "./utils";
 import {
-  addTokenMinted,
+  verifyPassportToken,
+  decodePassportToken,
+  verifySNSSignature,
+  checkConfigValidity,
+  checkCurrentMintPhaseIsActive,
+} from "./utils";
+import {
   decreaseQuantityAllowed,
   getPhaseForTokenID,
-  getPhaseMaxTokenID,
-  getPhaseTotalMintedQuantity,
   getTokenQuantityAllowed,
-  getTokensMintedByWallet,
-  getTotalMintedQuantity,
-  hasAllowance,
-  isAddressLocked,
   isOnAllowlist,
-  lockAddress,
   queryAndCorrectPendingMints,
-  setUUID,
   unlockAddress,
   updateUUIDStatus,
 } from "./database";
@@ -29,6 +26,7 @@ import axios from "axios";
 import logger from "./logger";
 import { eoaMintRequest } from "./types";
 import { recoverMessageAddress, verifyMessage } from "viem";
+import { ethers } from "ethers";
 
 // Initialize Prisma Client for database interactions
 const prisma = new PrismaClient();
@@ -64,7 +62,7 @@ fastify.post("/mint/passport", async (request: FastifyRequest, reply: FastifyRep
     await verifyPassportToken(idToken);
     logger.debug("ID token verified successfully");
     const decodedToken = await decodePassportToken(idToken);
-    const walletAddress = decodedToken.payload.passport.zkevm_eth_address;
+    const walletAddress = decodedToken.payload.passport.zkevm_eth_address.toLowerCase();
 
     // Conduct transactional operations related to minting
     try {
@@ -122,7 +120,7 @@ fastify.post("/mint/eoa", async (request: eoaMintRequest, reply: FastifyReply) =
   // Perform the minting process within a transaction
   try {
     const result = await prisma.$transaction(async (tx) => {
-      return performMint(walletAddress, currentPhase, currentPhaseIndex, tx);
+      return performMint(walletAddress.toLowerCase(), currentPhase, currentPhaseIndex, tx);
     });
     reply.send(result);
   } catch (error) {
@@ -165,26 +163,13 @@ fastify.get("/config", async (request: FastifyRequest, reply: FastifyReply) => {
 });
 
 // GET endpoint to check a user's eligibility to participate in minting
-fastify.get("/eligibility", async (request: FastifyRequest, reply: FastifyReply) => {
-  // Ensure authorization header is present
-  const authorizationHeader = request.headers["authorization"];
-  if (!authorizationHeader) {
-    logger.warn("Missing authorization header");
-    reply.status(401).send({ error: "Missing authorization header" });
-    return;
+fastify.get("/eligibility/:address", async (request: FastifyRequest<{ Params: { address: string } }>, reply: FastifyReply) => {
+  const address = request.params.address.toLowerCase();
+  if (!ethers.isAddress(address)) {
+    reply.status(400).send({ error: "Invalid address check" })
   }
 
-  // Remove the 'Bearer ' prefix to extract the token
-  const idToken = authorizationHeader.replace("Bearer ", "");
-
   try {
-    // Verify the provided ID token
-    await verifyPassportToken(idToken);
-    logger.debug("ID token verified successfully");
-    // Decode the token to obtain user-specific data
-    const decodedToken = await decodePassportToken(idToken);
-    const walletAddress = decodedToken.payload.passport.zkevm_eth_address;
-
     // Calculate the current time to check active mint phases
     const currentTime = Math.floor(Date.now() / 1000);
     const phaseEligibility = await Promise.all(
@@ -195,10 +180,10 @@ fastify.get("/eligibility", async (request: FastifyRequest, reply: FastifyReply)
         let isEligible = false;
 
         if (phase.enableAllowList) {
-          isAllowListed = await isOnAllowlist(walletAddress, index, prisma);
+          isAllowListed = await isOnAllowlist(address, index, prisma);
 
           if (isAllowListed) {
-            walletTokenAllowance = await getTokenQuantityAllowed(walletAddress, prisma);
+            walletTokenAllowance = await getTokenQuantityAllowed(address, prisma);
           }
         }
 
