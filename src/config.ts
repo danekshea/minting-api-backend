@@ -23,21 +23,20 @@ const serverConfig: ServerConfig = {
     eoaMintMessage: "Sign this message to verify your wallet address", //The message an EOA signs to verify their wallet address and mint
     mintPhases: [
       {
-        name: "Presale",
+        name: "Guaranteed",
         startTime: 1629913600,
         endTime: 1714570314,
-        startTokenID: 6015,
-        endTokenID: 6020,
+        startTokenID: 6030,
+        endTokenID: 6040,
         enableAllowList: true,
       },
       {
-        name: "Public Sale",
+        name: "Waitlist",
         startTime: 1714570315,
         endTime: 1719292800,
-        maxTokenSupply: 5,
         enableTokenIDRollOver: true,
-        enableAllowList: false,
-        maxTokensPerWallet: 25,
+        enableAllowList: true,
+        endTokenID: 6040,
       },
     ],
   },
