@@ -5,6 +5,8 @@ import { environment } from "./config";
 import logger from "./logger";
 import { addTokenMinted, calculateMaxPhaseSupply, getPhaseMaxTokenID, getPhaseTotalMintedQuantity, getTokensMintedByWallet, getTotalMintedQuantity, hasAllowance, isAddressLocked, isOnAllowlist, lockAddress, setUUID } from "./database";
 import { getMetadataByTokenId } from "./utils";
+import { MintPhase, NFTMetadata } from "./types";
+import { Prisma } from "@prisma/client";
 
 export const mintByMintingAPI = async (contractAddress: string, walletAddress: string, metadata: NFTMetadata | null, tokenID?: string): Promise<string> => {
   const config: blockchainData.BlockchainDataModuleConfiguration = {
@@ -52,7 +54,7 @@ export const mintByMintingAPI = async (contractAddress: string, walletAddress: s
   }
 };
 
-export async function performMint(walletAddress: string, currentPhase, currentPhaseIndex, tx) {
+export async function performMint(walletAddress: string, currentPhase: MintPhase, currentPhaseIndex: number, tx: Prisma.TransactionClient) {
   // Check if the wallet address is locked
   const isLocked = await isAddressLocked(walletAddress, tx);
   if (isLocked) {

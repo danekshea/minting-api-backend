@@ -3,6 +3,7 @@ import logger from "./logger";
 import serverConfig from "./config";
 import { environment } from "./config";
 import axios from "axios";
+import { ExtendedMintPhase, MintPhase } from "./types";
 
 const prisma = new PrismaClient();
 
@@ -63,9 +64,9 @@ export async function isUUIDAllowList(uuid: string, tx: Prisma.TransactionClient
   return Boolean(result);
 }
 
-export async function getPhaseTotalMintedQuantity(phase: number, tx: Prisma.TransactionClient): Promise<number> {
+export async function getPhaseTotalMintedQuantity(phase: number, prismaOrTx: Prisma.TransactionClient | PrismaClient): Promise<number> {
   try {
-    const result = await tx.mintedTokens.aggregate({
+    const result = await prismaOrTx.mintedTokens.aggregate({
       where: {
         status: { in: ["succeeded", "pending"] },
         phase: { equals: phase },
@@ -73,11 +74,11 @@ export async function getPhaseTotalMintedQuantity(phase: number, tx: Prisma.Tran
       _count: { tokenID: true },
     });
     const totalMintedQuantity = result._count.tokenID || 0;
-    logger.debug(`Total minted quantity: ${totalMintedQuantity}.`);
+    logger.debug(`Total minted quantity for phase ${phase}: ${totalMintedQuantity}.`);
     return totalMintedQuantity;
   } catch (error) {
-    logger.error(`Error retrieving total minted quantity for succeeded or pending mints: ${JSON.stringify(error, null, 2)}`);
-    return 0;
+    logger.error(`Error retrieving total minted quantity for phase ${phase}: ${error}`);
+    return -1; // Indicating an error state more explicitly
   }
 }
 
@@ -221,7 +222,7 @@ export async function getTokenQuantityAllowed(address: string, tx: Prisma.Transa
 }
 
 // Define the maximum supply limit for the current phase based on configuration
-export async function calculateMaxPhaseSupply(currentPhase, currentPhaseIndex, tx) {
+export async function calculateMaxPhaseSupply(currentPhase: MintPhase, currentPhaseIndex: number, tx: Prisma.TransactionClient) {
   let maxPhaseSupply;
   if (currentPhase.enableTokenIDRollOver) {
     if (currentPhase.maxTokenSupply) {
@@ -245,7 +246,7 @@ export async function calculateMaxPhaseSupply(currentPhase, currentPhaseIndex, t
 }
 
 // Use this function in your minting check
-export async function checkMintingLimit(currentPhase, currentPhaseIndex, tx) {
+export async function checkMintingLimit(currentPhase: MintPhase, currentPhaseIndex: number, tx: Prisma.TransactionClient) {
   const maxPhaseSupply = await calculateMaxPhaseSupply(currentPhase, currentPhaseIndex, tx);
 
   // Check the minted supply against the maximum limit for the current phase
@@ -254,4 +255,27 @@ export async function checkMintingLimit(currentPhase, currentPhaseIndex, tx) {
     logger.info(`Maximum supply for the current phase (${currentPhase.name}) has been minted.`);
     throw new Error(`Maximum supply for the current phase (${currentPhase.name}) has been minted.`);
   }
+}
+
+export async function processMintPhases(mintPhases: MintPhase[], prisma: PrismaClient): Promise<ExtendedMintPhase[]> {
+  return Promise.all(
+    mintPhases.map(async (phase, index) => {
+      const phaseConfig: ExtendedMintPhase = {
+        name: phase.name,
+        startTime: phase.startTime,
+        endTime: phase.endTime,
+        enableAllowList: phase.enableAllowList,
+        totalMinted: await getPhaseTotalMintedQuantity(index, prisma),
+      };
+
+      // Include optional properties only if they exist in the phase
+      if ("startTokenID" in phase) phaseConfig.startTokenID = phase.startTokenID;
+      if ("endTokenID" in phase) phaseConfig.endTokenID = phase.endTokenID;
+      if ("maxTokensPerWallet" in phase) phaseConfig.maxTokensPerWallet = phase.maxTokensPerWallet;
+      if ("enableTokenIDRollOver" in phase) phaseConfig.enableTokenIDRollOver = phase.enableTokenIDRollOver;
+      if ("maxTokenSupply" in phase) phaseConfig.maxTokenSupply = phase.maxTokenSupply;
+
+      return phaseConfig;
+    })
+  );
 }

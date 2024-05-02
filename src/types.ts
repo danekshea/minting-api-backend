@@ -12,6 +12,10 @@ export interface MintPhase {
   maxTokenSupply?: number; // Optional for phases with enableTokenIDRollOver
 }
 
+export interface ExtendedMintPhase extends MintPhase {
+  totalMinted?: number;
+}
+
 interface EnvironmentConfig {
   API_URL: string;
   API_KEY: string;

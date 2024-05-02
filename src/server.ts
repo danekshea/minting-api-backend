@@ -5,26 +5,12 @@ import { FastifyReply, FastifyRequest } from "fastify";
 import serverConfig from "./config";
 import { environment } from "./config";
 import { performMint } from "./minting";
-import {
-  verifyPassportToken,
-  decodePassportToken,
-  verifySNSSignature,
-  checkConfigValidity,
-  checkCurrentMintPhaseIsActive,
-} from "./utils";
-import {
-  decreaseQuantityAllowed,
-  getPhaseForTokenID,
-  getTokenQuantityAllowed,
-  isOnAllowlist,
-  queryAndCorrectPendingMints,
-  unlockAddress,
-  updateUUIDStatus,
-} from "./database";
+import { verifyPassportToken, decodePassportToken, verifySNSSignature, checkConfigValidity, checkCurrentMintPhaseIsActive } from "./utils";
+import { decreaseQuantityAllowed, getPhaseForTokenID, getPhaseTotalMintedQuantity, getTokenQuantityAllowed, isOnAllowlist, queryAndCorrectPendingMints, unlockAddress, updateUUIDStatus } from "./database";
 import { PrismaClient } from "@prisma/client";
 import axios from "axios";
 import logger from "./logger";
-import { eoaMintRequest } from "./types";
+import { ExtendedMintPhase, MintPhase, eoaMintRequest } from "./types";
 import { recoverMessageAddress, verifyMessage } from "viem";
 import { ethers } from "ethers";
 
@@ -132,41 +118,51 @@ fastify.post("/mint/eoa", async (request: eoaMintRequest, reply: FastifyReply) =
   }
 });
 
-// GET endpoint for retrieving minting phase configurations
 fastify.get("/config", async (request: FastifyRequest, reply: FastifyReply) => {
-  // Map through the mint phases to restructure the data for client consumption
-  const mintPhases = serverConfig[environment].mintPhases.map((phase) => {
-    const phaseConfig: any = {
-      name: phase.name,
-      startTime: phase.startTime,
-      endTime: phase.endTime,
-      startTokenID: phase.startTokenID,
-      endTokenID: phase.endTokenID,
-      enableAllowList: phase.enableAllowList,
-    };
+  const environmentConfig = serverConfig[environment];
 
-    // Add maxPerWallet property only if it exists in the configuration
-    if (phase.maxTokensPerWallet) {
-      phaseConfig.maxPerWallet = phase.maxTokensPerWallet;
-    }
+  try {
+    const mintPhases = serverConfig[environment].mintPhases;
 
-    return phaseConfig;
-  });
+    // Use Promise.all to wait for all async operations to complete
+    const processedPhases = await Promise.all(
+      mintPhases.map(async (phase, index) => {
+        const phaseConfig: ExtendedMintPhase = {
+          name: phase.name,
+          startTime: phase.startTime,
+          endTime: phase.endTime,
+          enableAllowList: phase.enableAllowList,
+          totalMinted: await getPhaseTotalMintedQuantity(index, prisma), // Accessing prisma from Fastify instance
+        };
 
-  // Send the structured mint phases data as a response
-  reply.send({
-    chainName: serverConfig[environment].chainName,
-    collectionAddress: serverConfig[environment].collectionAddress,
-    maxTokenSupplyAcrossAllPhases: serverConfig[environment].maxTokenSupplyAcrossAllPhases,
-    mintPhases,
-  });
+        // Include optional properties only if they exist in the phase
+        if ("startTokenID" in phase) phaseConfig.startTokenID = phase.startTokenID;
+        if ("endTokenID" in phase) phaseConfig.endTokenID = phase.endTokenID;
+        if ("maxTokensPerWallet" in phase) phaseConfig.maxTokensPerWallet = phase.maxTokensPerWallet;
+        if ("enableTokenIDRollOver" in phase) phaseConfig.enableTokenIDRollOver = phase.enableTokenIDRollOver;
+        if ("maxTokenSupply" in phase) phaseConfig.maxTokenSupply = phase.maxTokenSupply;
+
+        return phaseConfig;
+      })
+    );
+
+    reply.send({
+      chainName: environmentConfig.chainName,
+      collectionAddress: environmentConfig.collectionAddress,
+      maxTokenSupplyAcrossAllPhases: environmentConfig.maxTokenSupplyAcrossAllPhases,
+      mintPhases: processedPhases, // Send the processed list
+    });
+  } catch (error) {
+    console.error("Failed to retrieve configuration data:", error);
+    reply.status(500).send({ error: "Failed to retrieve configuration data." });
+  }
 });
 
 // GET endpoint to check a user's eligibility to participate in minting
 fastify.get("/eligibility/:address", async (request: FastifyRequest<{ Params: { address: string } }>, reply: FastifyReply) => {
   const address = request.params.address.toLowerCase();
   if (!ethers.isAddress(address)) {
-    reply.status(400).send({ error: "Invalid address check" })
+    reply.status(400).send({ error: "Invalid address check" });
   }
 
   try {
