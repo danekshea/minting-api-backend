@@ -292,7 +292,7 @@ fastify.get("/get-mint-request/:referenceId", async (request: FastifyRequest<{ P
   const { referenceId } = request.params;
 
   try {
-    const response = await axios.get(`https://api.sandbox.immutable.com/v1/chains/${serverConfig[environment].chainName}/collections/${serverConfig[environment].collectionAddress}/nfts/mint-requests/${referenceId}`, {
+    const response = await axios.get(`${serverConfig[environment].API_URL}/v1/chains/${serverConfig[environment].chainName}/collections/${serverConfig[environment].collectionAddress}/nfts/mint-requests/${referenceId}`, {
       headers: {
         "x-immutable-api-key": serverConfig[environment].API_KEY,
       },
