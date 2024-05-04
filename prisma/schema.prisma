@@ -9,25 +9,11 @@ generator client {
   provider = "prisma-client-js"
 }
 
-model AllowedAddress {
+model Allowlist {
   address   String  @id
-  quantityAllowed  Int    @default(0)
-  phase    Int
-  uuid      String?
 }
 
-model LockedAddress {
-  address   String @id
-  isLocked  Boolean @default(true)
-  lockedAt  DateTime @default(now())
-}
-
-model MintedTokens {
-  tokenID   Int    @unique
-  collectionAddress String
-  walletAddress   String
-  phase    Int
-  uuid     String
-  status  String
-  createdAt DateTime @default(now())
+model Mints {
+  address  String  @id
+  uuid    String
 }

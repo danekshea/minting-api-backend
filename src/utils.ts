@@ -46,7 +46,7 @@ export async function decodePassportToken(IDtoken: string): Promise<PassportIDTo
 // Function to verify the SNS signature
 export async function verifySNSSignature(webhookPayload: string): Promise<boolean> {
   return new Promise((resolve, reject) => {
-    validator.validate(webhookPayload, (err) => {
+    validator.validate(webhookPayload, (err: Error) => {
       if (err) {
         // Log the error as a stringified object to capture details
         logger.error(`Signature validation failed: ${JSON.stringify(err, null, 2)}`);
@@ -59,89 +59,63 @@ export async function verifySNSSignature(webhookPayload: string): Promise<boolea
   });
 }
 
-// Function to get metadata by token ID from a local directory
-export async function getMetadataByTokenId(metadataDir: string, tokenId: string): Promise<NFTMetadata | null> {
-  const filePath = path.join(metadataDir, `${tokenId}`); // Assuming JSON file extension
+export async function readAddressesFromFile(filePath: string) {
   try {
-    const fileContent = fs.readFileSync(filePath, "utf8");
-    const metadata: NFTMetadata = JSON.parse(fileContent);
-    // Log the loaded metadata as a stringified object
-    logger.debug(`Loaded metadata for token ID ${tokenId}: ${JSON.stringify(metadata, null, 2)}`);
-    return metadata;
+    const data = fs.readFileSync(filePath, { encoding: "utf-8" });
+    const addresses = data.split("\n").filter((line) => line.length > 0); // Assuming one address per line
+    return addresses;
   } catch (error) {
-    // Log the error as a stringified object
-    logger.error(`Error loading metadata for token ID ${tokenId}: ${JSON.stringify(error, null, 2)}`);
-    return null;
+    console.error("Error reading file:", error);
+    return [];
   }
 }
 
-export function checkConfigValidity(config) {
-  const { mintPhases, maxTokenSupplyAcrossAllPhases } = config;
-  const currentTime = Math.floor(Date.now() / 1000); // current time in seconds
+// export function checkConfigValidity(config) {
+//   const { mintPhases, maxTokenSupplyAcrossAllPhases } = config;
+//   const currentTime = Math.floor(Date.now() / 1000); // current time in seconds
 
-  let totalTokens = 0;
-  let lastEndTime = 0;
-  let tokenRanges = [];
+//   let totalTokens = 0;
+//   let lastEndTime = 0;
+//   let tokenRanges = [];
 
-  for (let i = 0; i < mintPhases.length; i++) {
-    const phase = mintPhases[i];
+//   for (let i = 0; i < mintPhases.length; i++) {
+//     const phase = mintPhases[i];
 
-    // Check if phase is currently active or has passed
-    if (currentTime >= phase.startTime && currentTime <= phase.endTime) {
-      logger.warn(`Phase "${phase.name}" is currently active.`);
-    } else if (currentTime > phase.endTime) {
-      logger.warn(`Phase "${phase.name}" has already ended.`);
-    }
+//     // Check if phase is currently active or has passed
+//     if (currentTime >= phase.startTime && currentTime <= phase.endTime) {
+//       logger.warn(`Phase "${phase.name}" is currently active.`);
+//     } else if (currentTime > phase.endTime) {
+//       logger.warn(`Phase "${phase.name}" has already ended.`);
+//     }
 
-    // Existing checks...
-    if (phase.enableTokenIDRollOver) {
-      // Conditions for TokenIDRollOver...
-    } else {
-      // Conditions for standard token ID management...
-      for (const range of tokenRanges) {
-        // Check for token ID range overlaps...
-      }
-      tokenRanges.push({ startTokenID: phase.startTokenID, endTokenID: phase.endTokenID });
-      totalTokens += phase.endTokenID - phase.startTokenID + 1;
-    }
+//     // Existing checks...
+//     if (phase.enableTokenIDRollOver) {
+//       // Conditions for TokenIDRollOver...
+//     } else {
+//       // Conditions for standard token ID management...
+//       for (const range of tokenRanges) {
+//         // Check for token ID range overlaps...
+//       }
+//       tokenRanges.push({ startTokenID: phase.startTokenID, endTokenID: phase.endTokenID });
+//       totalTokens += phase.endTokenID - phase.startTokenID + 1;
+//     }
 
-    // Check for overlapping phase times...
-    if (phase.startTime <= lastEndTime) {
-      logger.error(`Phase time overlap detected between phases ending at ${lastEndTime} and starting at ${phase.startTime}`);
-      return false;
-    }
-    lastEndTime = phase.endTime;
+//     // Check for overlapping phase times...
+//     if (phase.startTime <= lastEndTime) {
+//       logger.error(`Phase time overlap detected between phases ending at ${lastEndTime} and starting at ${phase.startTime}`);
+//       return false;
+//     }
+//     lastEndTime = phase.endTime;
 
-    // Check for maxTokensPerWallet when allowlist is enabled...
-  }
+//     // Check for maxTokensPerWallet when allowlist is enabled...
+//   }
 
-  // Check if maxTokenSupplyAcrossAllPhases is exceeded...
-  if (maxTokenSupplyAcrossAllPhases !== undefined && totalTokens > maxTokenSupplyAcrossAllPhases) {
-    logger.error(`Total token supply across all phases (${totalTokens}) exceeds the configured maximum (${maxTokenSupplyAcrossAllPhases}).`);
-    return false;
-  }
+//   // Check if maxTokenSupplyAcrossAllPhases is exceeded...
+//   if (maxTokenSupplyAcrossAllPhases !== undefined && totalTokens > maxTokenSupplyAcrossAllPhases) {
+//     logger.error(`Total token supply across all phases (${totalTokens}) exceeds the configured maximum (${maxTokenSupplyAcrossAllPhases}).`);
+//     return false;
+//   }
 
-  logger.info("All config checks passed.");
-  return true;
-}
-
-export async function checkCurrentMintPhaseIsActive() {
-  try {
-    const currentTime = Math.floor(Date.now() / 1000);
-    if (!serverConfig || !serverConfig[environment].mintPhases) {
-      logger.error("Mint phases configuration is missing.");
-      return { currentPhase: null, currentPhaseIndex: -1 }; // Return null phase and -1 as index if config is missing
-    }
-    const mintPhases = serverConfig[environment].mintPhases;
-    const currentPhaseIndex = mintPhases.findIndex((phase) => currentTime >= phase.startTime && currentTime <= phase.endTime);
-    const currentPhase = mintPhases[currentPhaseIndex];
-    if (currentPhase) {
-      return { currentPhase, currentPhaseIndex: currentPhaseIndex }; // Return both the phase and its index
-    } else {
-      return { currentPhase: null, currentPhaseIndex: -1 }; // Return null and -1 if no active phase
-    }
-  } catch (error) {
-    logger.error(`Error checking mint phases: ${error.message}`);
-    return { currentPhase: null, currentPhaseIndex: -1 }; // Return null and -1 in case of an error
-  }
-}
+//   logger.info("All config checks passed.");
+//   return true;
+// }
