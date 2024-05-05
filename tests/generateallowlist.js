@@ -12,7 +12,7 @@ fs.readFile("tests/signers.json", "utf8", (err, data) => {
   // Create an array to store address strings
   const addresses = [];
 
-  for (let i = 0; i < 1500; i++) {
+  for (let i = 0; i < 3000; i++) {
     addresses.push(signers[i].address);
   }
 

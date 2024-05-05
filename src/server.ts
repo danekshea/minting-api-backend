@@ -5,7 +5,7 @@ import { FastifyReply, FastifyRequest } from "fastify";
 import serverConfig from "./config";
 import { environment } from "./config";
 import { mintByMintingAPI } from "./minting";
-import { verifyPassportToken, decodePassportToken, verifySNSSignature, checkConfigValidity, checkCurrentMintPhaseIsActive, getMetadataByTokenId, readAddressesFromFile } from "./utils";
+import { verifyPassportToken, decodePassportToken, verifySNSSignature, checkConfigValidity, checkCurrentMintPhaseIsActive, getMetadataByTokenId, readAddressesFromFile, returnActivePhase } from "./utils";
 import { addTokenMinted, readAddressesFromAllowlist } from "./database";
 import { PrismaClient } from "@prisma/client";
 import axios from "axios";
@@ -16,10 +16,20 @@ import { ethers } from "ethers";
 import { v4 as uuidv4 } from "uuid";
 import { Prisma } from "@prisma/client";
 import { error } from "console";
+import { read } from "fs";
 
 // Initialize Prisma Client for database interactions
 const prisma = new PrismaClient();
-let allowlist: string[] = [];
+let allowlists: string[][] = [];
+
+const metadata = {
+  name: "Paradise Pass",
+  description:
+    "Unlock the Gold tier in Paradise Pass with the Paradise Pass Gold NFT! Take part in daily and weekly challenges, or just hold the NFT and occasionally visit your Paradise Island to earn Moani tokens. Embark on a rewarding journey in Paradise Tycoon, both before and after the World Creation Event.",
+  image: "https://paradisetycoon.com/nft/ppass/media/paradisepass.png",
+  animation_url: "https://paradisetycoon.com/nft/ppass/media/paradisepass.mp4",
+  attributes: [],
+};
 
 // Enable CORS with specified options for API security and flexibility
 fastify.register(cors, {
@@ -31,6 +41,8 @@ fastify.register(cors, {
 // Define POST endpoint for minting tokens
 fastify.post("/mint/passport", async (request: FastifyRequest, reply: FastifyReply) => {
   const authorizationHeader = request.headers["authorization"];
+  let walletAddress: string;
+  let activePhase: number | null;
 
   // Check if the authorization header is present
   if (!authorizationHeader) {
@@ -45,70 +57,35 @@ fastify.post("/mint/passport", async (request: FastifyRequest, reply: FastifyRep
     await verifyPassportToken(idToken);
     logger.debug("ID token verified successfully");
     const decodedToken = await decodePassportToken(idToken);
-    const walletAddress = decodedToken.payload.passport.zkevm_eth_address.toLowerCase();
-
-    // Conduct transactional operations related to minting
-    try {
-      const result = await prisma.$transaction(async (tx) => {
-        // Retrieve metadata for the token and initiate the minting process
-        const metadata = {
-          image: "https://emerald-variable-swallow-254.mypinata.cloud/ipfs/QmNYn1DS9djwCLCcu7Pyrb6uUtGzf29AH6cBcXAncELeik/1.png",
-          name: "Copypasta #1",
-          description: "1 of many in the Copypasta NFTs collection",
-          attributes: [
-            {
-              trait_type: "Id",
-              value: "1",
-            },
-          ],
-        };
-        const uuid = await mintByMintingAPI(serverConfig[environment].collectionAddress, walletAddress, metadata);
-
-        await addTokenMinted(walletAddress, uuid, tx);
-
-        // Send response with wallet address and UUID of the mint
-        return { collectionAddress: serverConfig[environment].collectionAddress, walletAddress, uuid };
-      });
-      reply.send(result);
-    } catch (err) {
-      // Handle errors that occur during the minting process
-      logger.error(`Error during minting process: ${err}`);
-      reply.status(500).send({ error: `${err}` });
-    }
-  } catch (err) {
-    // Handle errors related to ID token verification
-    logger.warn(`Failed to verify ID token: ${JSON.stringify(err, null, 2)}`);
-    reply.status(401).send({ error: "Invalid ID token" });
-  } finally {
-    // Ensure database connection is closed
-    await prisma.$disconnect();
-  }
-});
-
-// Define POST endpoint for minting tokens
-fastify.post("/mint/eoa", async (request: eoaMintRequest, reply: FastifyReply) => {
-  console.log("Request body is: ", request.body);
-
-  const { signature } = request.body;
-  const message = serverConfig[environment].eoaMintMessage;
-
-  // Attempt to recover wallet address from the signature
-  let walletAddress: `0x${string}`;
-
-  try {
-    walletAddress = await recoverMessageAddress({ message, signature });
-    logger.info(`Recovered wallet address: ${walletAddress} from signature: ${signature}`);
+    walletAddress = decodedToken.payload.passport.zkevm_eth_address.toLowerCase();
   } catch (error) {
-    logger.warn(`Failed to recover wallet address: ${error}`);
-    reply.status(401).send({ error: "Failed to verify signature." });
+    logger.error(`Error verifying ID token: ${error}`);
+    reply.status(401).send({ error: "Invalid ID token" });
     return;
   }
 
+  // Check if a phase is active and return it
   try {
-    if (allowlist.includes(walletAddress)) {
-      logger.info(`Wallet address ${walletAddress} is on the allowlist.`);
+    activePhase = returnActivePhase();
+    if (activePhase === null) {
+      logger.warn("No active mint phase found.");
+      reply.status(401).send({ error: "No active mint phase found." });
+      return;
     } else {
-      logger.warn(`Wallet address ${walletAddress} is not on the allowlist.`);
+      logger.info(`Active mint phase found: ${activePhase}`);
+    }
+  } catch {
+    logger.error("Error checking active mint phase.");
+    reply.status(500).send({ error: "Failed to check active mint phase." });
+    return;
+  }
+
+  // Check if the wallet address is on the allowlist for the given phase
+  try {
+    if (allowlists[activePhase].includes(walletAddress)) {
+      logger.info(`Wallet address ${walletAddress} is on the allowlist for phase ${activePhase}.`);
+    } else {
+      logger.warn(`Wallet address ${walletAddress} is not on the allowlist for phase ${activePhase}.`);
       reply.status(401).send({ error: "Wallet address is not on the allowlist." });
       return;
     }
@@ -118,41 +95,17 @@ fastify.post("/mint/eoa", async (request: eoaMintRequest, reply: FastifyReply) =
     return;
   }
 
-  // Verify the recovered address with the message and signature
-  try {
-    await verifyMessage({ address: walletAddress, message, signature });
-  } catch (error) {
-    logger.warn(`Signature verification failed: ${error}`);
-    reply.status(401).send({ error: "Invalid signature." });
-    return;
-  }
-
-  const metadata = {
-    name: "Paradise Pass",
-    description:
-      "Unlock the Gold tier in Paradise Pass with the Paradise Pass Gold NFT! Take part in daily and weekly challenges, or just hold the NFT and occasionally visit your Paradise Island to earn Moani tokens. Embark on a rewarding journey in Paradise Tycoon, both before and after the World Creation Event.",
-    image: "https://paradisetycoon.com/nft/ppass/media/paradisepass.png",
-    animation_url: "https://paradisetycoon.com/nft/ppass/media/paradisepass.mp4",
-    attributes: [],
-  };
   // Perform the minting process within a transaction
   // Conduct transactional operations related to minting
   const uuid = uuidv4();
   logger.info(`Attempting to mint NFT wallet address ${walletAddress} with UUID ${uuid}`);
   try {
-    const result = await prisma.$transaction(async (tx) => {
-      try {
-        // Record the minting operation in the database
-        await addTokenMinted(walletAddress, uuid, tx);
+    // Record the minting operation in the database
+    await addTokenMinted(walletAddress, uuid, prisma);
 
-        // If all operations are successful, construct the response object
-        return { collectionAddress: serverConfig[environment].collectionAddress, walletAddress, uuid };
-      } catch (error) {
-        // Log any errors that occur within the transaction and rethrow to trigger a rollback
-        logger.error(`Error during transaction: ${error}`);
-        throw error;
-      }
-    });
+    // If all operations are successful, construct the response object
+    const result = { collectionAddress: serverConfig[environment].collectionAddress, walletAddress, uuid };
+
     // Send the successful result back to the client
     reply.send(result);
 
@@ -175,12 +128,108 @@ fastify.post("/mint/eoa", async (request: eoaMintRequest, reply: FastifyReply) =
       logger.error(`Error during minting process: ${error}`);
 
       // Send a general error response to the client
+      reply.status(500).send({ error: `Failed to process mint request: ${error}` });
+    }
+  }
+});
+
+// Define POST endpoint for minting tokens
+fastify.post("/mint/eoa", async (request: eoaMintRequest, reply: FastifyReply) => {
+  console.log("Request body is: ", request.body);
+
+  const { signature } = request.body;
+  const message = serverConfig[environment].eoaMintMessage;
+
+  // Attempt to recover wallet address from the signature
+  let walletAddress: `0x${string}`;
+  let activePhase: number | null;
+
+  // Check if a phase is active and return it
+  try {
+    activePhase = returnActivePhase();
+    if (activePhase === null) {
+      logger.warn("No active mint phase found.");
+      reply.status(401).send({ error: "No active mint phase found." });
+      return;
+    } else {
+      logger.info(`Active mint phase found: ${activePhase}`);
+    }
+  } catch {
+    logger.error("Error checking active mint phase.");
+    reply.status(500).send({ error: "Failed to check active mint phase." });
+    return;
+  }
+
+  //Recover the wallet address
+  try {
+    walletAddress = await recoverMessageAddress({ message, signature });
+    logger.info(`Recovered wallet address: ${walletAddress} from signature: ${signature}`);
+  } catch (error) {
+    logger.warn(`Failed to recover wallet address: ${error}`);
+    reply.status(401).send({ error: "Failed to verify signature." });
+    return;
+  }
+
+  // Verify the recovered address with the message and signature
+  try {
+    await verifyMessage({ address: walletAddress, message, signature });
+  } catch (error) {
+    logger.warn(`Signature verification failed: ${error}`);
+    reply.status(401).send({ error: "Invalid signature." });
+    return;
+  }
+
+  // Check if the wallet address is on the allowlist for the given phase
+  try {
+    const lowerCaseWalletAddress = walletAddress.toLowerCase();
+    if (allowlists[activePhase].includes(lowerCaseWalletAddress)) {
+      logger.info(`Wallet address ${walletAddress} is on the allowlist for phase ${activePhase}.`);
+    } else {
+      logger.warn(`Wallet address ${walletAddress} is not on the allowlist for phase ${activePhase}.`);
+      reply.status(401).send({ error: "Wallet address is not on the allowlist." });
+      return;
+    }
+  } catch (error) {
+    logger.error(`Error checking allowlist: ${error}`);
+    reply.status(500).send({ error: "Failed to check allowlist." });
+    return;
+  }
+
+  // Perform the minting process within a transaction
+  // Conduct transactional operations related to minting
+  const uuid = uuidv4();
+  logger.info(`Attempting to mint NFT wallet address ${walletAddress} with UUID ${uuid}`);
+  try {
+    // Record the minting operation in the database
+    await addTokenMinted(walletAddress, uuid, prisma);
+
+    // If all operations are successful, construct the response object
+    const result = { collectionAddress: serverConfig[environment].collectionAddress, walletAddress, uuid };
+
+    // Send the successful result back to the client
+    reply.send(result);
+
+    // External API call outside of the transaction
+    try {
+      //await mintByMintingAPI(serverConfig[environment].collectionAddress, walletAddress, uuid, metadata);
+    } catch (apiError) {
+      // Handle API call failure
+      logger.error(`Minting API call failed: ${apiError}`);
+      throw error;
+    }
+  } catch (error) {
+    // Determine the error type and respond accordingly
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+      // Handle unique constraint violation
+      logger.error(`Unique constraint failed for address: ${error}`);
+      reply.status(401).send({ error: "Unauthorized: Duplicate entry for address" });
+    } else {
+      // Log the error that caused the transaction to fail
+      logger.error(`Error during minting process: ${error}`);
+
+      // Send a general error response to the client
       reply.status(500).send({ error: `Failed to process mint request: ${error.message}` });
     }
-  } finally {
-    // Ensure the database connection is cleanly disconnected
-    await prisma.$disconnect();
-    logger.debug("Database connection cleanly disconnected.");
   }
 });
 
@@ -197,15 +246,7 @@ fastify.get("/config", async (request: FastifyRequest, reply: FastifyReply) => {
           name: phase.name,
           startTime: phase.startTime,
           endTime: phase.endTime,
-          enableAllowList: phase.enableAllowList, // Accessing prisma from Fastify instance
         };
-
-        // Include optional properties only if they exist in the phase
-        if ("startTokenID" in phase) phaseConfig.startTokenID = phase.startTokenID;
-        if ("endTokenID" in phase) phaseConfig.endTokenID = phase.endTokenID;
-        if ("maxTokensPerWallet" in phase) phaseConfig.maxTokensPerWallet = phase.maxTokensPerWallet;
-        if ("enableTokenIDRollOver" in phase) phaseConfig.enableTokenIDRollOver = phase.enableTokenIDRollOver;
-        if ("maxTokenSupply" in phase) phaseConfig.maxTokenSupply = phase.maxTokenSupply;
 
         return phaseConfig;
       })
@@ -214,7 +255,6 @@ fastify.get("/config", async (request: FastifyRequest, reply: FastifyReply) => {
     reply.send({
       chainName: environmentConfig.chainName,
       collectionAddress: environmentConfig.collectionAddress,
-      maxTokenSupplyAcrossAllPhases: environmentConfig.maxTokenSupplyAcrossAllPhases,
       mintPhases: processedPhases, // Send the processed list
     });
   } catch (error) {
@@ -226,6 +266,7 @@ fastify.get("/config", async (request: FastifyRequest, reply: FastifyReply) => {
 // GET endpoint to check a user's eligibility to participate in minting
 fastify.get("/eligibility/:address", async (request: FastifyRequest<{ Params: { address: string } }>, reply: FastifyReply) => {
   const address = request.params.address.toLowerCase();
+
   if (!ethers.isAddress(address)) {
     reply.status(400).send({ error: "Invalid address check" });
   }
@@ -236,30 +277,14 @@ fastify.get("/eligibility/:address", async (request: FastifyRequest<{ Params: { 
     const phaseEligibility = await Promise.all(
       serverConfig[environment].mintPhases.map(async (phase, index) => {
         const isActive = currentTime >= phase.startTime && currentTime <= phase.endTime;
-        let walletTokenAllowance = null;
-        let isAllowListed = false;
-        let isEligible = false;
-
-        if (phase.enableAllowList) {
-          isAllowListed = await isOnAllowlist(address, index, prisma);
-
-          if (isAllowListed) {
-            walletTokenAllowance = await getTokenQuantityAllowed(address, prisma);
-          }
-        }
-
-        isEligible = !phase.enableAllowList || isAllowListed;
+        const isAllowListed = allowlists[index].includes(address);
 
         return {
           name: phase.name,
           startTime: phase.startTime,
           endTime: phase.endTime,
-          startTokenID: phase.startTokenID,
-          endTokenID: phase.endTokenID,
           isActive,
-          isEligible,
-          ...(isAllowListed && { walletTokenAllowance }),
-          ...(!phase.enableAllowList && { maxTokensPerWallet: phase.maxTokensPerWallet }),
+          isAllowListed,
         };
       })
     );
@@ -273,9 +298,6 @@ fastify.get("/eligibility/:address", async (request: FastifyRequest<{ Params: { 
   } catch (err) {
     logger.warn("Failed to verify ID token:", err);
     reply.status(401).send({ error: "Invalid ID token" });
-  } finally {
-    // Always disconnect from the database when done
-    await prisma.$disconnect();
   }
 });
 
@@ -311,12 +333,26 @@ const start = async () => {
     // if (!checkConfigValidity(serverConfig[environment])) {
     //   throw new Error("Invalid server configuration. Exiting.");
     // }
-    allowlist = await readAddressesFromAllowlist();
+
+    const phases = serverConfig[environment].mintPhases;
+    allowlists = await Promise.all(
+      phases.map(async (phase, index) => {
+        return await readAddressesFromAllowlist(index, prisma);
+      })
+    );
+
+    allowlists.forEach((allowlist, index) => {
+      logger.info(`Addresses on phase ${index}: ${allowlist.length}`);
+    });
 
     await fastify.listen(3000);
     logger.info(`Server started successfully on port 3000.`);
 
-    logger.info("Pending mints check completed.");
+    if (returnActivePhase() === null) {
+      logger.warn("No active mint phase found.");
+    } else {
+      logger.info(`Active phase: ${returnActivePhase()}`);
+    }
   } catch (err) {
     logger.error(`Error starting server: ${err.message}`);
     // Optionally, you might want to handle specific errors differently here

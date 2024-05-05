@@ -17,7 +17,7 @@ const serverConfig: ServerConfig = {
     mintRequestURL: (chainName: string, collectionAddress: string, referenceId: string) => `https://api.sandbox.immutable.com/v1/chains/${chainName}/collections/${collectionAddress}/nfts/mint-requests/${referenceId}`,
     allowedTopicArn: "arn:aws:sns:us-east-2:783421985614:*", //Used for webhook SNS verification
     metadataDir: "tokens/metadata", //Where the token metadata resides, {filename} will be replaced with the token ID
-    maxTokenSupplyAcrossAllPhases: 10000,
+    maxTokenSupplyAcrossAllPhases: 1500,
     enableFileLogging: true, //Should logs be output to files or just console?
     logLevel: "debug",
     eoaMintMessage: "Sign this message to verify your wallet address", //The message an EOA signs to verify their wallet address and mint
@@ -25,18 +25,12 @@ const serverConfig: ServerConfig = {
       {
         name: "Guaranteed",
         startTime: 1629913600,
-        endTime: 1714623711,
-        startTokenID: 6030,
-        endTokenID: 6040,
-        enableAllowList: true,
+        endTime: 1714916592,
       },
       {
         name: "Waitlist",
-        startTime: 1714623712,
+        startTime: 1714916593,
         endTime: 1719292800,
-        enableAllowList: false,
-        startTokenID: 6080,
-        endTokenID: 6090,
       },
     ],
   },
@@ -53,21 +47,14 @@ const serverConfig: ServerConfig = {
     eoaMintMessage: "Sign this message to verify your wallet address", //The message an EOA signs to verify their wallet address and mint
     mintPhases: [
       {
-        name: "Presale",
+        name: "Guaranteed",
         startTime: 1629913600,
-        endTime: 1714397828,
-        startTokenID: 6,
-        endTokenID: 1000,
-        enableAllowList: true,
+        endTime: 1714623711,
       },
       {
-        name: "Public Sale",
-        startTime: 1714397829,
+        name: "Waitlist",
+        startTime: 1714623712,
         endTime: 1719292800,
-        startTokenID: 2027,
-        endTokenID: 3000,
-        enableAllowList: false,
-        maxTokensPerWallet: 5,
       },
     ],
   },

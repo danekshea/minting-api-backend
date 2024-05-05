@@ -1,15 +1,10 @@
+import { Prisma } from "@prisma/client";
 import { FastifyRequest } from "fastify";
 
 export interface MintPhase {
   name: string;
   startTime: number;
   endTime: number;
-  startTokenID?: number; // Optional since enableTokenIDRollOver may negate its necessity
-  endTokenID?: number; // Optional if maxTokenSupply is used with enableTokenIDRollOver
-  enableAllowList: boolean;
-  enableTokenIDRollOver?: boolean; // Optional since it's not in all phases
-  maxTokensPerWallet?: number; // Optional since it's not in all phases
-  maxTokenSupply?: number; // Optional for phases with enableTokenIDRollOver
 }
 
 export interface ExtendedMintPhase extends MintPhase {

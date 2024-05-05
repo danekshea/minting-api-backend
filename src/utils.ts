@@ -70,6 +70,18 @@ export async function readAddressesFromFile(filePath: string) {
   }
 }
 
+export function returnActivePhase(): number | null {
+  const currentTime = Math.floor(Date.now() / 1000); // current time in seconds
+  const phases = serverConfig[environment].mintPhases;
+  for (let i = 0; i < phases.length; i++) {
+    const phase = phases[i];
+    if (currentTime >= phase.startTime && currentTime <= phase.endTime) {
+      return i;
+    }
+  }
+  return null;
+}
+
 // export function checkConfigValidity(config) {
 //   const { mintPhases, maxTokenSupplyAcrossAllPhases } = config;
 //   const currentTime = Math.floor(Date.now() / 1000); // current time in seconds
