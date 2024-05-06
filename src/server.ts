@@ -202,7 +202,7 @@ fastify.post("/mint/eoa", async (request: eoaMintRequest, reply: FastifyReply) =
   logger.info(`Attempting to mint NFT wallet address ${walletAddress} with UUID ${uuid}`);
   try {
     // Record the minting operation in the database
-    await addTokenMinted(walletAddress, uuid, prisma);
+    await addTokenMinted(walletAddress, uuid, activePhase, "pending", prisma);
 
     // If all operations are successful, construct the response object
     const result = { collectionAddress: serverConfig[environment].collectionAddress, walletAddress, uuid };
@@ -212,7 +212,7 @@ fastify.post("/mint/eoa", async (request: eoaMintRequest, reply: FastifyReply) =
 
     // External API call outside of the transaction
     try {
-      //await mintByMintingAPI(serverConfig[environment].collectionAddress, walletAddress, uuid, metadata);
+      await mintByMintingAPI(serverConfig[environment].collectionAddress, walletAddress, uuid, metadata);
     } catch (apiError) {
       // Handle API call failure
       logger.error(`Minting API call failed: ${apiError}`);

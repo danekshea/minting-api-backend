@@ -1,8 +1,8 @@
 config:
   target: "http://localhost:3000"
   phases:
-    - duration: 10
-      arrivalRate: 30
+    - duration: 120
+      arrivalRate: 20
 
 scenarios:
   - name: "Scenario 1"

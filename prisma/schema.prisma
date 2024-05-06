@@ -17,4 +17,6 @@ model Allowlist {
 model Mints {
   address  String  @id
   uuid    String
+  phase   Int 
+  status  String
 }
