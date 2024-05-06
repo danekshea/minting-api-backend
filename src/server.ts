@@ -102,7 +102,7 @@ fastify.post("/mint/passport", async (request: FastifyRequest, reply: FastifyRep
   logger.info(`Attempting to mint NFT wallet address ${walletAddress} with UUID ${uuid}`);
   try {
     // Record the minting operation in the database
-    await addTokenMinted(walletAddress, uuid, prisma);
+    await addTokenMinted(walletAddress, uuid, activePhase, "pending", prisma);
 
     // If all operations are successful, construct the response object
     const result = { collectionAddress: serverConfig[environment].collectionAddress, walletAddress, uuid };
