@@ -15,7 +15,6 @@ export async function verifyPassportToken(IDtoken: string, jwk: string): Promise
   try {
     const pem = jwkToPem(jwk);
     const verifyPromise = promisify(jwt.verify);
-
     try {
       const decoded = await verifyPromise(IDtoken, pem, { algorithms: ["RS256"] });
       // Stringify the decoded token to log the details properly
