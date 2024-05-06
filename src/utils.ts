@@ -11,11 +11,8 @@ import logger from "./logger";
 import { NFTMetadata, PassportIDToken, ServerConfig } from "./types";
 
 // Function to verify the JWT token
-export async function verifyPassportToken(IDtoken: string): Promise<void> {
+export async function verifyPassportToken(IDtoken: string, jwk: string): Promise<void> {
   try {
-    const response = await axios.get(IMX_JWT_KEY_URL);
-    const jwks = response.data;
-    const jwk = jwks.keys[0];
     const pem = jwkToPem(jwk);
     const verifyPromise = promisify(jwt.verify);
 

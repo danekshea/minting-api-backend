@@ -2,7 +2,7 @@
 const fastify = require("fastify")({ logger: true });
 const cors = require("@fastify/cors");
 import { FastifyReply, FastifyRequest } from "fastify";
-import serverConfig from "./config";
+import serverConfig, { IMX_JWT_KEY_URL } from "./config";
 import { environment } from "./config";
 import { mintByMintingAPI } from "./minting";
 import { verifyPassportToken, decodePassportToken, verifySNSSignature, checkConfigValidity, checkCurrentMintPhaseIsActive, getMetadataByTokenId, readAddressesFromFile, returnActivePhase } from "./utils";
@@ -21,6 +21,7 @@ import { read } from "fs";
 // Initialize Prisma Client for database interactions
 const prisma = new PrismaClient();
 let allowlists: string[][] = [];
+let jwk: string;
 
 const metadata = {
   name: "Paradise Pass",
@@ -54,7 +55,7 @@ fastify.post("/mint/passport", async (request: FastifyRequest, reply: FastifyRep
   // Remove 'Bearer ' prefix and verify the ID token
   const idToken = authorizationHeader.replace("Bearer ", "");
   try {
-    await verifyPassportToken(idToken);
+    await verifyPassportToken(idToken, jwk);
     logger.debug("ID token verified successfully");
     const decodedToken = await decodePassportToken(idToken);
     walletAddress = decodedToken.payload.passport.zkevm_eth_address.toLowerCase();
@@ -333,6 +334,14 @@ const start = async () => {
     // if (!checkConfigValidity(serverConfig[environment])) {
     //   throw new Error("Invalid server configuration. Exiting.");
     // }
+    try {
+      const response = await axios.get(IMX_JWT_KEY_URL);
+      const jwks = response.data;
+      jwk = jwks.keys[0];
+    } catch (error) {
+      logger.error(`Error fetching JWKs: ${error}`);
+      throw error;
+    }
 
     const phases = serverConfig[environment].mintPhases;
     allowlists = await Promise.all(
@@ -354,7 +363,7 @@ const start = async () => {
       logger.info(`Active phase: ${returnActivePhase()}`);
     }
   } catch (err) {
-    logger.error(`Error starting server: ${err.message}`);
+    logger.error(`Error starting server: ${err}`);
     // Optionally, you might want to handle specific errors differently here
     process.exit(1);
   }
