@@ -18,6 +18,7 @@ const serverConfig: ServerConfig = {
     allowedTopicArn: "arn:aws:sns:us-east-2:783421985614:*", //Used for webhook SNS verification
     metadataDir: "tokens/metadata", //Where the token metadata resides, {filename} will be replaced with the token ID
     enableFileLogging: true, //Should logs be output to files or just console?
+    maxTokenSupplyAcrossAllPhases: 1500,
     logLevel: "debug",
     eoaMintMessage: "Sign this message to verify your wallet address", //The message an EOA signs to verify their wallet address and mint
     mintPhases: [
@@ -42,6 +43,7 @@ const serverConfig: ServerConfig = {
     allowedTopicArn: "arn:aws:sns:us-east-2:362750628221:*", //Used for webhook SNS verification
     metadataDir: "tokens/metadata", //Where the token metadata resides, {filename} will be replaced with the token ID
     enableFileLogging: true, //Should logs be output to files or just console?
+    maxTokenSupplyAcrossAllPhases: 1500,
     logLevel: "debug",
     eoaMintMessage: "Sign this message to verify your wallet address", //The message an EOA signs to verify their wallet address and mint
     mintPhases: [

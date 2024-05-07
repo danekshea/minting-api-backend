@@ -1,12 +1,8 @@
 import { blockchainData, config as sdkConfig } from "@imtbl/sdk";
-import { v4 as uuidv4 } from "uuid";
 import serverConfig from "./config";
 import { environment } from "./config";
 import logger from "./logger";
-import { addTokenMinted, calculateMaxPhaseSupply, getPhaseMaxTokenID, getPhaseTotalMintedQuantity, getTokensMintedByWallet, getTotalMintedQuantity, hasAllowance, isAddressLocked, isOnAllowlist, lockAddress, setUUID } from "./database";
-import { getMetadataByTokenId } from "./utils";
-import { MintPhase, NFTMetadata } from "./types";
-import { Prisma } from "@prisma/client";
+import { NFTMetadata } from "./types";
 
 export const mintByMintingAPI = async (contractAddress: string, walletAddress: string, uuid: string, metadata: NFTMetadata | null): Promise<string> => {
   const config: blockchainData.BlockchainDataModuleConfiguration = {

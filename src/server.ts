@@ -5,8 +5,8 @@ import { FastifyReply, FastifyRequest } from "fastify";
 import serverConfig, { IMX_JWT_KEY_URL } from "./config";
 import { environment } from "./config";
 import { mintByMintingAPI } from "./minting";
-import { verifyPassportToken, decodePassportToken, verifySNSSignature, checkConfigValidity, checkCurrentMintPhaseIsActive, getMetadataByTokenId, readAddressesFromFile, returnActivePhase } from "./utils";
-import { addTokenMinted, readAddressesFromAllowlist } from "./database";
+import { verifyPassportToken, decodePassportToken, verifySNSSignature, readAddressesFromFile, returnActivePhase } from "./utils";
+import { addTokenMinted, checkAddressMinted, readAddressesFromAllowlist, totalMintCount, totalMintCountAcrossAllPhases } from "./database";
 import { PrismaClient } from "@prisma/client";
 import axios from "axios";
 import logger from "./logger";
@@ -229,7 +229,7 @@ fastify.post("/mint/eoa", async (request: eoaMintRequest, reply: FastifyReply) =
       logger.error(`Error during minting process: ${error}`);
 
       // Send a general error response to the client
-      reply.status(500).send({ error: `Failed to process mint request: ${error.message}` });
+      reply.status(500).send({ error: `Failed to process mint request: ${error}` });
     }
   }
 });
@@ -239,6 +239,7 @@ fastify.get("/config", async (request: FastifyRequest, reply: FastifyReply) => {
 
   try {
     const mintPhases = serverConfig[environment].mintPhases;
+    const totalMintedAcrossAllPhases = await totalMintCountAcrossAllPhases(prisma);
 
     // Use Promise.all to wait for all async operations to complete
     const processedPhases = await Promise.all(
@@ -256,6 +257,8 @@ fastify.get("/config", async (request: FastifyRequest, reply: FastifyReply) => {
     reply.send({
       chainName: environmentConfig.chainName,
       collectionAddress: environmentConfig.collectionAddress,
+      maxTokenSupplyAcrossAllPhases: environmentConfig.maxTokenSupplyAcrossAllPhases,
+      totalMintedAcrossAllPhases: totalMintedAcrossAllPhases,
       mintPhases: processedPhases, // Send the processed list
     });
   } catch (error) {
@@ -294,6 +297,7 @@ fastify.get("/eligibility/:address", async (request: FastifyRequest<{ Params: { 
       chainName: serverConfig[environment].chainName,
       collectionAddress: serverConfig[environment].collectionAddress,
       maxTokenSupplyAcrossAllPhases: serverConfig[environment].maxTokenSupplyAcrossAllPhases,
+      addressMinted: await checkAddressMinted(address, prisma),
       mintPhases: phaseEligibility,
     });
   } catch (err) {

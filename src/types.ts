@@ -1,5 +1,6 @@
 import { Prisma } from "@prisma/client";
 import { FastifyRequest } from "fastify";
+import { Signature } from "viem";
 
 export interface MintPhase {
   name: string;
@@ -19,7 +20,7 @@ interface EnvironmentConfig {
   mintRequestURL: (chainName: string, collectionAddress: string, referenceId: string) => string;
   allowedTopicArn: string;
   metadataDir: string;
-  maxTokenSupplyAcrossAllPhases?: number; // Optional for generalization
+  maxTokenSupplyAcrossAllPhases: number; // Optional for generalization
   enableFileLogging: boolean;
   logLevel: string;
   eoaMintMessage: string;
