@@ -52,19 +52,6 @@ fastify.post("/mint/passport", async (request: FastifyRequest, reply: FastifyRep
     return;
   }
 
-  // Remove 'Bearer ' prefix and verify the ID token
-  const idToken = authorizationHeader.replace("Bearer ", "");
-  try {
-    await verifyPassportToken(idToken, jwk);
-    logger.debug("ID token verified successfully");
-    const decodedToken = await decodePassportToken(idToken);
-    walletAddress = decodedToken.payload.passport.zkevm_eth_address.toLowerCase();
-  } catch (error) {
-    logger.error(`Error verifying ID token: ${error}`);
-    reply.status(401).send({ error: "Invalid ID token" });
-    return;
-  }
-
   // Check if a phase is active and return it
   try {
     activePhase = returnActivePhase();
@@ -78,6 +65,19 @@ fastify.post("/mint/passport", async (request: FastifyRequest, reply: FastifyRep
   } catch {
     logger.error("Error checking active mint phase.");
     reply.status(500).send({ error: "Failed to check active mint phase." });
+    return;
+  }
+
+  // Remove 'Bearer ' prefix and verify the ID token
+  const idToken = authorizationHeader.replace("Bearer ", "");
+  try {
+    await verifyPassportToken(idToken, jwk);
+    logger.debug("ID token verified successfully");
+    const decodedToken = await decodePassportToken(idToken);
+    walletAddress = decodedToken.payload.passport.zkevm_eth_address.toLowerCase();
+  } catch (error) {
+    logger.error(`Error verifying ID token: ${error}`);
+    reply.status(401).send({ error: "Invalid ID token" });
     return;
   }
 
@@ -136,13 +136,12 @@ fastify.post("/mint/passport", async (request: FastifyRequest, reply: FastifyRep
 
 // Define POST endpoint for minting tokens
 fastify.post("/mint/eoa", async (request: eoaMintRequest, reply: FastifyReply) => {
-  console.log("Request body is: ", request.body);
-
   const { signature } = request.body;
   const message = serverConfig[environment].eoaMintMessage;
 
   // Attempt to recover wallet address from the signature
-  let walletAddress: `0x${string}`;
+  let recoveredWalletAddress: `0x${string}`;
+  let walletAddress: string;
   let activePhase: number | null;
 
   // Check if a phase is active and return it
@@ -163,8 +162,9 @@ fastify.post("/mint/eoa", async (request: eoaMintRequest, reply: FastifyReply) =
 
   //Recover the wallet address
   try {
-    walletAddress = await recoverMessageAddress({ message, signature });
-    logger.info(`Recovered wallet address: ${walletAddress} from signature: ${signature}`);
+    recoveredWalletAddress = await recoverMessageAddress({ message, signature });
+    logger.info(`Recovered wallet address: ${recoveredWalletAddress} from signature: ${signature}`);
+    walletAddress = recoveredWalletAddress.toLowerCase();
   } catch (error) {
     logger.warn(`Failed to recover wallet address: ${error}`);
     reply.status(401).send({ error: "Failed to verify signature." });
@@ -173,7 +173,7 @@ fastify.post("/mint/eoa", async (request: eoaMintRequest, reply: FastifyReply) =
 
   // Verify the recovered address with the message and signature
   try {
-    await verifyMessage({ address: walletAddress, message, signature });
+    await verifyMessage({ address: recoveredWalletAddress, message, signature });
   } catch (error) {
     logger.warn(`Signature verification failed: ${error}`);
     reply.status(401).send({ error: "Invalid signature." });
@@ -182,8 +182,7 @@ fastify.post("/mint/eoa", async (request: eoaMintRequest, reply: FastifyReply) =
 
   // Check if the wallet address is on the allowlist for the given phase
   try {
-    const lowerCaseWalletAddress = walletAddress.toLowerCase();
-    if (allowlists[activePhase].includes(lowerCaseWalletAddress)) {
+    if (allowlists[activePhase].includes(walletAddress)) {
       logger.info(`Wallet address ${walletAddress} is on the allowlist for phase ${activePhase}.`);
     } else {
       logger.warn(`Wallet address ${walletAddress} is not on the allowlist for phase ${activePhase}.`);
@@ -297,7 +296,7 @@ fastify.get("/eligibility/:address", async (request: FastifyRequest<{ Params: { 
       chainName: serverConfig[environment].chainName,
       collectionAddress: serverConfig[environment].collectionAddress,
       maxTokenSupplyAcrossAllPhases: serverConfig[environment].maxTokenSupplyAcrossAllPhases,
-      addressMinted: await checkAddressMinted(address, prisma),
+      hasMinted: await checkAddressMinted(address, prisma),
       mintPhases: phaseEligibility,
     });
   } catch (err) {
