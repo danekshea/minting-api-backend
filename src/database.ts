@@ -18,7 +18,7 @@ export async function addTokenMinted(address: string, uuid: string, phase: numbe
   }
 }
 
-export async function checkAddressMinted(address: string = "0x42c2d104C05A9889d79Cdcd82F69D389ea24Db9a", prisma: PrismaClient): Promise<boolean> {
+export async function checkAddressMinted(address: string = "0x42c2d104C05A9889d79Cdcd82F69D389ea24Db9a", prisma: PrismaClient): Promise<string | null> {
   try {
     logger.info(`Checking if user has minted: ${address}`);
     const mintedAddress = await prisma.mints.findUnique({
@@ -26,9 +26,8 @@ export async function checkAddressMinted(address: string = "0x42c2d104C05A9889d7
         address: address,
       },
     });
-    console.log(mintedAddress?.uuid);
     logger.info(`User has minted: ${mintedAddress !== null}`);
-    return mintedAddress !== null;
+    return mintedAddress?.uuid ?? null;
   } catch (error) {
     logger.error(`Error checking if user has minted: ${error}`);
     throw error;

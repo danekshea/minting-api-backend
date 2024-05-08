@@ -6,7 +6,7 @@ import serverConfig, { IMX_JWT_KEY_URL } from "./config";
 import { environment } from "./config";
 import { mintByMintingAPI } from "./minting";
 import { verifyPassportToken, decodePassportToken, verifySNSSignature, readAddressesFromFile, returnActivePhase } from "./utils";
-import { addTokenMinted, checkAddressMinted, readAddressesFromAllowlist, totalMintCount, totalMintCountAcrossAllPhases } from "./database";
+import { addTokenMinted, checkAddressMinted, readAddressesFromAllowlist, totalMintCountAcrossAllPhases } from "./database";
 import { PrismaClient } from "@prisma/client";
 import axios from "axios";
 import logger from "./logger";
