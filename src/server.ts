@@ -213,7 +213,7 @@ fastify.post("/mint/eoa", async (request: eoaMintRequest, reply: FastifyReply) =
         logger.info("Minting API call successful.");
       })
       .catch((apiError) => {
-        logger.error(`Minting API call failed: ${error}`);
+        logger.error(`Minting API call failed: ${apiError}`);
       });
   } catch (error) {
     // Determine the error type and respond accordingly

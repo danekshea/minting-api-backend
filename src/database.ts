@@ -76,12 +76,6 @@ export async function readAddressesFromAllowlist(phase: number, prisma: PrismaCl
 
 // async function main() {
 //   const prisma = new PrismaClient();
-//   await queryAndCorrectPendingMints(prisma);
-// }
-// main();
-
-// async function main() {
-//   const prisma = new PrismaClient();
 //   const filePath = "data/addresses.txt"; // Path to the file containing Ethereum addresses
 //   const addresses = await readAddressesFromFile(filePath);
 //   if (addresses.length > 0) {

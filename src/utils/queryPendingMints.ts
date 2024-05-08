@@ -21,27 +21,31 @@ export async function queryAndCorrectPendingMints(prisma: PrismaClient): Promise
           },
         });
         logger.debug(`Checking status of mint with UUID ${uuid}: ${JSON.stringify(response.data, null, 2)}`);
+        if (response.data.result.length > 0) {
+          if (response.data.result[0].status === "succeeded") {
+            await prisma.$transaction(async (prisma) => {
+              // Update the status of minted tokens
+              await prisma.mints.updateMany({
+                where: { uuid },
+                data: { status: "succeeded" },
+              });
 
-        if (response.data.result[0].status === "succeeded") {
-          await prisma.$transaction(async (prisma) => {
-            // Update the status of minted tokens
+              // Log the successful mint
+              logger.info(`Mint with UUID ${uuid} succeeded. Updating status.`);
+            });
+          } else if (response.data.result[0].status === "failed") {
             await prisma.mints.updateMany({
               where: { uuid },
-              data: { status: "succeeded" },
+              data: { status: "failed" },
             });
-
-            // Log the successful mint
-            logger.info(`Mint with UUID ${uuid} succeeded. Updating status.`);
-          });
-        } else if (response.data.result[0].status === "failed") {
-          await prisma.mints.updateMany({
-            where: { uuid },
-            data: { status: "failed" },
-          });
-          logger.info(`Mint with UUID ${uuid} failed. Updating status.`);
+            logger.info(`Mint with UUID ${uuid} failed. Updating status.`);
+          }
+        } else {
+          logger.error(`No mint found with UUID ${uuid}.`);
         }
       } catch (error) {
-        logger.error(`Error processing mint with UUID ${mint.uuid}: ${JSON.stringify(error, null, 2)}`);
+        logger.error(`Error processing mint with UUID ${mint.uuid}.`);
+        console.log(error);
       }
     }
   } catch (error) {
