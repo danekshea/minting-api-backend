@@ -18,12 +18,16 @@ fs.readFile("tests/signers.json", "utf8", (err, data) => {
   flow:
     - get:
         url: "/config"
+    - get:
+        url: "/eligibility/0x586f52c4ecc336dcbfb6dd3aafeb7665818ebdd6"
     - post:
         url: "/mint/eoa"
         json:
           signature: "${signer.signature}"
         headers:
-          Content-Type: "application/json"`;
+          Content-Type: "application/json"
+    - get:
+        url: "/get-mint-request/4a2b9487-2251-455b-98fc-289891528e02"`;
 
     scenarios.push(scenario);
   });

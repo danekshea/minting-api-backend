@@ -319,6 +319,7 @@ fastify.get("/get-mint-request/:referenceId", async (request: FastifyRequest<{ P
   } catch (error) {
     if (axios.isAxiosError(error)) {
       logger.error("Error querying mint request:", error.message);
+      console.log(error.message);
       reply.status(error.response?.status || 500).send({ error: "Failed to query mint request" });
     } else {
       logger.error("Unexpected error querying mint request:", error);
