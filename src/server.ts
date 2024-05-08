@@ -110,14 +110,13 @@ fastify.post("/mint/passport", async (request: FastifyRequest, reply: FastifyRep
     // Send the successful result back to the client
     reply.send(result);
 
-    // External API call outside of the transaction
-    try {
-      await mintByMintingAPI(serverConfig[environment].collectionAddress, walletAddress, uuid, metadata);
-    } catch (apiError) {
-      // Handle API call failure
-      logger.error(`Minting API call failed: ${apiError}`);
-      throw error;
-    }
+    mintByMintingAPI(serverConfig[environment].collectionAddress, walletAddress, uuid, metadata)
+      .then(() => {
+        logger.info("Minting API call successful.");
+      })
+      .catch((apiError) => {
+        logger.error(`Minting API call failed: ${error}`);
+      });
   } catch (error) {
     // Determine the error type and respond accordingly
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
@@ -209,14 +208,13 @@ fastify.post("/mint/eoa", async (request: eoaMintRequest, reply: FastifyReply) =
     // Send the successful result back to the client
     reply.send(result);
 
-    // External API call outside of the transaction
-    try {
-      await mintByMintingAPI(serverConfig[environment].collectionAddress, walletAddress, uuid, metadata);
-    } catch (apiError) {
-      // Handle API call failure
-      logger.error(`Minting API call failed: ${apiError}`);
-      throw error;
-    }
+    mintByMintingAPI(serverConfig[environment].collectionAddress, walletAddress, uuid, metadata)
+      .then(() => {
+        logger.info("Minting API call successful.");
+      })
+      .catch((apiError) => {
+        logger.error(`Minting API call failed: ${error}`);
+      });
   } catch (error) {
     // Determine the error type and respond accordingly
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {

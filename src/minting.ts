@@ -44,7 +44,8 @@ export const mintByMintingAPI = async (contractAddress: string, walletAddress: s
 
     return uuid;
   } catch (error) {
-    logger.error("Error sending mint request:", JSON.stringify(error, null, 2));
+    logger.error("Error sending mint request:", error);
+    console.log(error);
     throw error;
   }
 };
