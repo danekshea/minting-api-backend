@@ -22,6 +22,7 @@ import { read } from "fs";
 const prisma = new PrismaClient();
 let allowlists: string[][] = [];
 let jwk: string;
+let totalMintCount: number;
 
 const metadata = {
   name: "Paradise Pass",
@@ -141,6 +142,12 @@ fastify.post("/mint/passport", async (request: FastifyRequest, reply: FastifyRep
     return;
   }
 
+  if (!(totalMintCount < serverConfig[environment].maxTokenSupplyAcrossAllPhases)) {
+    logger.warn("Total mint count has reached the limit.");
+    reply.status(401).send({ error: "Total mint count has reached the limit." });
+    return;
+  }
+
   // Remove 'Bearer ' prefix and verify the ID token
   const idToken = authorizationHeader.replace("Bearer ", "");
   try {
@@ -176,6 +183,9 @@ fastify.post("/mint/passport", async (request: FastifyRequest, reply: FastifyRep
   try {
     // Record the minting operation in the database
     await addTokenMinted(walletAddress, uuid, activePhase, "pending", prisma);
+
+    totalMintCount++;
+    logger.info(`Total mint count: ${totalMintCount}`);
 
     // If all operations are successful, construct the response object
     const result = { collectionAddress: serverConfig[environment].collectionAddress, walletAddress, uuid };
@@ -232,6 +242,12 @@ fastify.post("/mint/eoa", async (request: eoaMintRequest, reply: FastifyReply) =
     return;
   }
 
+  if (!(totalMintCount < serverConfig[environment].maxTokenSupplyAcrossAllPhases)) {
+    logger.warn("Total mint count has reached the limit.");
+    reply.status(401).send({ error: "Total mint count has reached the limit." });
+    return;
+  }
+
   //Recover the wallet address
   try {
     recoveredWalletAddress = await recoverMessageAddress({ message, signature });
@@ -274,6 +290,9 @@ fastify.post("/mint/eoa", async (request: eoaMintRequest, reply: FastifyReply) =
   try {
     // Record the minting operation in the database
     await addTokenMinted(walletAddress, uuid, activePhase, "pending", prisma);
+
+    totalMintCount++;
+    logger.info(`Total mint count: ${totalMintCount}`);
 
     // If all operations are successful, construct the response object
     const result = { collectionAddress: serverConfig[environment].collectionAddress, walletAddress, uuid };
@@ -341,6 +360,9 @@ const start = async () => {
       logger.error(`Error fetching JWKs: ${error}`);
       throw error;
     }
+
+    totalMintCount = await totalMintCountAcrossAllPhases(prisma);
+    logger.info(`Total mint count: ${totalMintCount}`);
 
     const phases = serverConfig[environment].mintPhases;
     allowlists = await Promise.all(
