@@ -39,6 +39,79 @@ fastify.register(cors, {
   allowedHeaders: ["Content-Type", "Authorization"], // Allowed HTTP headers
 });
 
+fastify.get("/config", async (request: FastifyRequest, reply: FastifyReply) => {
+  const environmentConfig = serverConfig[environment];
+
+  try {
+    const mintPhases = serverConfig[environment].mintPhases;
+    const totalMintedAcrossAllPhases = await totalMintCountAcrossAllPhases(prisma);
+
+    // Use Promise.all to wait for all async operations to complete
+    const processedPhases = await Promise.all(
+      mintPhases.map(async (phase, index) => {
+        const phaseConfig: ExtendedMintPhase = {
+          name: phase.name,
+          startTime: phase.startTime,
+          endTime: phase.endTime,
+        };
+
+        return phaseConfig;
+      })
+    );
+
+    reply.send({
+      chainName: environmentConfig.chainName,
+      collectionAddress: environmentConfig.collectionAddress,
+      maxTokenSupplyAcrossAllPhases: environmentConfig.maxTokenSupplyAcrossAllPhases,
+      totalMintedAcrossAllPhases: totalMintedAcrossAllPhases,
+      eoaMintMessage: serverConfig[environment].eoaMintMessage,
+      mintPhases: processedPhases, // Send the processed list
+    });
+  } catch (error) {
+    console.error("Failed to retrieve configuration data:", error);
+    reply.status(500).send({ error: "Failed to retrieve configuration data." });
+  }
+});
+
+// GET endpoint to check a user's eligibility to participate in minting
+fastify.get("/eligibility/:address", async (request: FastifyRequest<{ Params: { address: string } }>, reply: FastifyReply) => {
+  const address = request.params.address.toLowerCase();
+
+  if (!ethers.isAddress(address)) {
+    reply.status(400).send({ error: "Invalid address check" });
+  }
+
+  try {
+    // Calculate the current time to check active mint phases
+    const currentTime = Math.floor(Date.now() / 1000);
+    const phaseEligibility = await Promise.all(
+      serverConfig[environment].mintPhases.map(async (phase, index) => {
+        const isActive = currentTime >= phase.startTime && currentTime <= phase.endTime;
+        const isAllowListed = allowlists[index].includes(address);
+
+        return {
+          name: phase.name,
+          startTime: phase.startTime,
+          endTime: phase.endTime,
+          isActive,
+          isAllowListed,
+        };
+      })
+    );
+    // Send eligibility information as a response
+    reply.send({
+      chainName: serverConfig[environment].chainName,
+      collectionAddress: serverConfig[environment].collectionAddress,
+      maxTokenSupplyAcrossAllPhases: serverConfig[environment].maxTokenSupplyAcrossAllPhases,
+      hasMinted: await checkAddressMinted(address, prisma),
+      mintPhases: phaseEligibility,
+    });
+  } catch (err) {
+    logger.warn("Failed to verify ID token:", err);
+    reply.status(401).send({ error: "Invalid ID token" });
+  }
+});
+
 // Define POST endpoint for minting tokens
 fastify.post("/mint/passport", async (request: FastifyRequest, reply: FastifyReply) => {
   const authorizationHeader = request.headers["authorization"];
@@ -213,7 +286,7 @@ fastify.post("/mint/eoa", async (request: eoaMintRequest, reply: FastifyReply) =
         logger.info("Minting API call successful.");
       })
       .catch((apiError) => {
-        logger.error(`Minting API call failed: ${apiError}`);
+        logger.error(`Minting API call failed for ${walletAddress} and ${uuid}: ${apiError}`);
       });
   } catch (error) {
     // Determine the error type and respond accordingly
@@ -228,78 +301,6 @@ fastify.post("/mint/eoa", async (request: eoaMintRequest, reply: FastifyReply) =
       // Send a general error response to the client
       reply.status(500).send({ error: `Failed to process mint request: ${error}` });
     }
-  }
-});
-
-fastify.get("/config", async (request: FastifyRequest, reply: FastifyReply) => {
-  const environmentConfig = serverConfig[environment];
-
-  try {
-    const mintPhases = serverConfig[environment].mintPhases;
-    const totalMintedAcrossAllPhases = await totalMintCountAcrossAllPhases(prisma);
-
-    // Use Promise.all to wait for all async operations to complete
-    const processedPhases = await Promise.all(
-      mintPhases.map(async (phase, index) => {
-        const phaseConfig: ExtendedMintPhase = {
-          name: phase.name,
-          startTime: phase.startTime,
-          endTime: phase.endTime,
-        };
-
-        return phaseConfig;
-      })
-    );
-
-    reply.send({
-      chainName: environmentConfig.chainName,
-      collectionAddress: environmentConfig.collectionAddress,
-      maxTokenSupplyAcrossAllPhases: environmentConfig.maxTokenSupplyAcrossAllPhases,
-      totalMintedAcrossAllPhases: totalMintedAcrossAllPhases,
-      mintPhases: processedPhases, // Send the processed list
-    });
-  } catch (error) {
-    console.error("Failed to retrieve configuration data:", error);
-    reply.status(500).send({ error: "Failed to retrieve configuration data." });
-  }
-});
-
-// GET endpoint to check a user's eligibility to participate in minting
-fastify.get("/eligibility/:address", async (request: FastifyRequest<{ Params: { address: string } }>, reply: FastifyReply) => {
-  const address = request.params.address.toLowerCase();
-
-  if (!ethers.isAddress(address)) {
-    reply.status(400).send({ error: "Invalid address check" });
-  }
-
-  try {
-    // Calculate the current time to check active mint phases
-    const currentTime = Math.floor(Date.now() / 1000);
-    const phaseEligibility = await Promise.all(
-      serverConfig[environment].mintPhases.map(async (phase, index) => {
-        const isActive = currentTime >= phase.startTime && currentTime <= phase.endTime;
-        const isAllowListed = allowlists[index].includes(address);
-
-        return {
-          name: phase.name,
-          startTime: phase.startTime,
-          endTime: phase.endTime,
-          isActive,
-          isAllowListed,
-        };
-      })
-    );
-    // Send eligibility information as a response
-    reply.send({
-      chainName: serverConfig[environment].chainName,
-      collectionAddress: serverConfig[environment].collectionAddress,
-      maxTokenSupplyAcrossAllPhases: serverConfig[environment].maxTokenSupplyAcrossAllPhases,
-      hasMinted: await checkAddressMinted(address, prisma),
-      mintPhases: phaseEligibility,
-    });
-  } catch (err) {
-    logger.warn("Failed to verify ID token:", err);
-    reply.status(401).send({ error: "Invalid ID token" });
   }
 });
 
@@ -324,10 +325,6 @@ fastify.get("/get-mint-request/:referenceId", async (request: FastifyRequest<{ P
       reply.status(500).send({ error: "An unexpected error occurred" });
     }
   }
-});
-
-fastify.get("/get-eoa-mint-message", async (request: FastifyRequest, reply: FastifyReply) => {
-  reply.send({ serverConfig: serverConfig[environment].eoaMintMessage });
 });
 
 // Start the server
