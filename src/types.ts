@@ -15,6 +15,8 @@ export interface ExtendedMintPhase extends MintPhase {
 interface EnvironmentConfig {
   API_URL: string;
   API_KEY: string;
+  HOST_IP: string;
+  PORT: number;
   chainName: string;
   collectionAddress: string;
   mintRequestURL: (chainName: string, collectionAddress: string, referenceId: string) => string;

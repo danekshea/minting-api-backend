@@ -375,8 +375,8 @@ const start = async () => {
       logger.info(`Addresses on phase ${index}: ${allowlist.length}`);
     });
 
-    await fastify.listen(3000);
-    logger.info(`Server started successfully on port 3000.`);
+    await fastify.listen(serverConfig[environment].PORT, serverConfig[environment].HOST_IP);
+    logger.info(`Server started successfully on port ${serverConfig[environment].PORT}.`);
 
     if (returnActivePhase() === null) {
       logger.warn("No active mint phase found.");
