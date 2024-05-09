@@ -35,6 +35,13 @@ const serverConfig: ServerConfig = {
         endTime: 1719292800,
       },
     ],
+    metadata: {
+      name: "Paradise Pass",
+      description: "Unlock the Gold tier in Paradise Pass with the Paradise Pass Gold NFT! Embark on a rewarding journey in Paradise Tycoon.",
+      image: "https://paradisetycoon.com/nft/ppass/media/paradisepass.png",
+      animation_url: "https://paradisetycoon.com/nft/ppass/media/paradisepass.mp4",
+      attributes: [],
+    },
   },
   [config.Environment.PRODUCTION]: {
     API_URL: "https://api.immutable.com",
@@ -62,6 +69,13 @@ const serverConfig: ServerConfig = {
         endTime: 1719292800,
       },
     ],
+    metadata: {
+      name: "Paradise Pass",
+      description: "Unlock the Gold tier in Paradise Pass with the Paradise Pass Gold NFT! Embark on a rewarding journey in Paradise Tycoon.",
+      image: "https://paradisetycoon.com/nft/ppass/media/paradisepass.png",
+      animation_url: "https://paradisetycoon.com/nft/ppass/media/paradisepass.mp4",
+      attributes: [],
+    },
   },
 };
 

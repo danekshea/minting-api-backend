@@ -27,6 +27,7 @@ interface EnvironmentConfig {
   logLevel: string;
   eoaMintMessage: string;
   mintPhases: MintPhase[];
+  metadata: NFTMetadata;
 }
 
 export interface ServerConfig {
@@ -60,9 +61,10 @@ export type PassportIDToken = {
 };
 
 export interface NFTMetadata {
-  image: string;
   name: string;
   description: string;
+  image: string;
+  animation_url: string;
   attributes: Attribute[];
 }
 

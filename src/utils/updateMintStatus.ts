@@ -3,15 +3,15 @@ import logger from "../logger";
 import axios from "axios";
 import serverConfig, { environment } from "../config";
 
-export async function queryAndCorrectPendingMints(prisma: PrismaClient): Promise<void> {
+export async function updateMintStatus(prisma: PrismaClient): Promise<void> {
   try {
     const pendingMints = await prisma.mints.findMany({
-      where: { status: "pending" },
+      where: {
+        status: {
+          not: "succeeded",
+        },
+      },
     });
-    // Check if there are any pending mints and log them if there are
-    if (pendingMints.length > 0) {
-      logger.debug(`Pending mints: ${JSON.stringify(pendingMints, null, 2)}`);
-    }
     for (const mint of pendingMints) {
       try {
         const uuid = mint.uuid;
@@ -55,5 +55,5 @@ export async function queryAndCorrectPendingMints(prisma: PrismaClient): Promise
 
 (async () => {
   const prisma = new PrismaClient();
-  await queryAndCorrectPendingMints(prisma);
+  await updateMintStatus(prisma);
 })();
