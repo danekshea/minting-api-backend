@@ -2,8 +2,8 @@ config:
   target: "http://localhost:3000"
   phases:
     - name: "Steady state load"
-      duration: 60
-      arrivalRate: 40
+      duration: 120
+      arrivalRate: 20
 scenarios:
   - name: "Scenario 1"
     flow:

@@ -3,6 +3,7 @@ import logger from "../logger";
 import axios from "axios";
 import serverConfig, { environment } from "../config";
 import { mintByMintingAPI } from "../minting";
+import { v4 as uuidv4 } from "uuid";
 
 export async function mintFailsAndMissing(prisma: PrismaClient): Promise<void> {
   try {
@@ -25,15 +26,31 @@ export async function mintFailsAndMissing(prisma: PrismaClient): Promise<void> {
         logger.debug(`Checking status of mint with UUID ${uuid}: ${JSON.stringify(response.data, null, 2)}`);
         if (response.data.result.length > 0) {
           if (response.data.result[0].status === "failed") {
-            mintByMintingAPI(serverConfig[environment].collectionAddress, mint.address, uuid, mint.metadata);
-            await prisma.mints.updateMany({
+            const newUUID = uuidv4();
+
+            logger.info(`Mint with UUID ${uuid} failed. Retrying with ${newUUID}.`);
+
+            const updates = await prisma.mints.updateMany({
               where: { uuid },
-              data: { status: "failed" },
+              data: { status: "pending", uuid: newUUID },
             });
-            logger.info(`Mint with UUID ${uuid} failed. Updating status.`);
+
+            if (updates.count > 0) {
+              mintByMintingAPI(serverConfig[environment].collectionAddress, mint.address, newUUID, serverConfig[environment].metadata);
+            }
           }
         } else {
           logger.error(`No mint found with UUID ${uuid}.`);
+          const newUUID = uuidv4();
+
+          const updates = await prisma.mints.updateMany({
+            where: { uuid },
+            data: { status: "pending", uuid: newUUID },
+          });
+
+          if (updates.count > 0) {
+            mintByMintingAPI(serverConfig[environment].collectionAddress, mint.address, newUUID, serverConfig[environment].metadata);
+          }
         }
       } catch (error) {
         logger.error(`Error processing mint with UUID ${mint.uuid}.`);

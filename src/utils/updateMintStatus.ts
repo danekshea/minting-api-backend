@@ -42,6 +42,10 @@ export async function updateMintStatus(prisma: PrismaClient): Promise<void> {
             logger.info(`Mint with UUID ${uuid} failed. Updating status.`);
           }
         } else {
+          await prisma.mints.updateMany({
+            where: { uuid },
+            data: { status: "500" },
+          });
           logger.error(`No mint found with UUID ${uuid}.`);
         }
       } catch (error) {
