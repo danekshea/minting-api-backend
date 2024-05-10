@@ -3,7 +3,7 @@ config:
   phases:
     - name: "Steady state load"
       duration: 60
-      arrivalRate: 10
+      arrivalRate: 40
 scenarios:
   - name: "Scenario 1"
     flow:

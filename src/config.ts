@@ -11,8 +11,9 @@ export const IMX_JWT_KEY_URL = "https://auth.immutable.com/.well-known/jwks.json
 const serverConfig: ServerConfig = {
   [config.Environment.SANDBOX]: {
     API_URL: "https://api.sandbox.immutable.com",
-    API_KEY: process.env.SANDBOX_IMMUTABLE_API_KEY!,
-    HOST_IP: "127.0.0.1",
+    HUB_API_KEY: process.env.SANDBOX_HUB_IMMUTABLE_API_KEY!,
+    RPS_API_KEY: process.env.SANDBOX_RPS_IMMUTABLE_API_KEY!,
+    HOST_IP: "localhost",
     PORT: 3000,
     chainName: "imtbl-zkevm-testnet",
     collectionAddress: "0x76bedf3f6d486922d77db2e1a43cea4bf9c22ef7",
@@ -45,8 +46,9 @@ const serverConfig: ServerConfig = {
   },
   [config.Environment.PRODUCTION]: {
     API_URL: "https://api.immutable.com",
-    API_KEY: process.env.MAINNET_IMMUTABLE_API_KEY!,
-    HOST_IP: "127.0.0.1",
+    HUB_API_KEY: process.env.MAINNET_HUB_IMMUTABLE_API_KEY!,
+    RPS_API_KEY: process.env.MAINNET_RPS_IMMUTABLE_API_KEY!,
+    HOST_IP: "localhost",
     PORT: 3000,
     chainName: "imtbl-zkevm-mainnet",
     collectionAddress: "0x88b87272649b3495d99b1702f358286b19f8c3da",

@@ -17,7 +17,8 @@ export async function updateMintStatus(prisma: PrismaClient): Promise<void> {
         const uuid = mint.uuid;
         const response = await axios.get(serverConfig[environment].mintRequestURL(serverConfig[environment].chainName, serverConfig[environment].collectionAddress, uuid), {
           headers: {
-            "x-immutable-api-key": serverConfig[environment].API_KEY,
+            "x-immutable-api-key": serverConfig[environment].HUB_API_KEY,
+            "x-api-key": serverConfig[environment].RPS_API_KEY,
           },
         });
         logger.debug(`Checking status of mint with UUID ${uuid}: ${JSON.stringify(response.data, null, 2)}`);

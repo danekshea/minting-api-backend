@@ -12,12 +12,16 @@ export const mintByMintingAPI = async (contractAddress: string, walletAddress: s
     overrides: {
       basePath: serverConfig[environment].API_URL,
       headers: {
-        "x-immutable-api-key": serverConfig[environment].API_KEY!,
+        "x-immutable-api-key": serverConfig[environment].HUB_API_KEY!,
+        "x-api-key": serverConfig[environment].RPS_API_KEY!,
       },
     },
   };
 
+  console.log(`RPS API KEY: ${serverConfig[environment].RPS_API_KEY}`);
   const client = new blockchainData.BlockchainData(config);
+
+  logger.debug(client.config);
 
   const asset: any = {
     owner_address: walletAddress,
