@@ -2,16 +2,15 @@
 const fastify = require("fastify")({ logger: true });
 const cors = require("@fastify/cors");
 import { FastifyReply, FastifyRequest } from "fastify";
-import serverConfig, { IMX_JWT_KEY_URL } from "./config";
-import { environment } from "./config";
+import serverConfig, { IMX_JWT_KEY_URL, environment } from "./config";
 import { mintByMintingAPI } from "./minting";
 import { verifyPassportToken, decodePassportToken, verifySNSSignature, returnActivePhase } from "./utils";
 import { addTokenMinted, checkAddressMinted, readAddressesFromAllowlist, totalMintCountAcrossAllPhases, updateUUIDStatus } from "./database";
 import { PrismaClient } from "@prisma/client";
 import axios from "axios";
 import logger from "./logger";
-import { ExtendedMintPhase, MintPhase, eoaMintRequest } from "./types";
-import { recoverMessageAddress, verifyMessage } from "viem";
+import { ExtendedMintPhase, eoaMintRequest } from "./types";
+import { recoverMessageAddress, verifyMessage, isAddress } from "viem";
 import { ethers } from "ethers";
 import { v4 as uuidv4 } from "uuid";
 import { Prisma } from "@prisma/client";
@@ -77,8 +76,9 @@ fastify.get("/config", async (request: FastifyRequest, reply: FastifyReply) => {
 fastify.get("/eligibility/:address", async (request: FastifyRequest<{ Params: { address: string } }>, reply: FastifyReply) => {
   const address = request.params.address.toLowerCase();
 
-  if (!ethers.isAddress(address)) {
+  if (!isAddress(address)) {
     reply.status(400).send({ error: "Invalid address check" });
+    return;
   }
 
   try {
@@ -249,6 +249,7 @@ fastify.post("/mint/eoa", async (request: eoaMintRequest, reply: FastifyReply) =
 
   //Recover the wallet address
   try {
+    console.log(`Signature: ${signature}`);
     recoveredWalletAddress = await recoverMessageAddress({ message, signature });
     logger.info(`Recovered wallet address: ${recoveredWalletAddress} from signature: ${signature}`);
     walletAddress = recoveredWalletAddress.toLowerCase();

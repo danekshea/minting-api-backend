@@ -18,10 +18,7 @@ export const mintByMintingAPI = async (contractAddress: string, walletAddress: s
     },
   };
 
-  console.log(`RPS API KEY: ${serverConfig[environment].RPS_API_KEY}`);
   const client = new blockchainData.BlockchainData(config);
-
-  logger.debug(client.config);
 
   const asset: any = {
     owner_address: walletAddress,

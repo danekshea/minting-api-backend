@@ -55,11 +55,20 @@ export async function verifySNSSignature(webhookPayload: string): Promise<boolea
   });
 }
 
-export async function readAddressesFromFile(filePath: string) {
+export async function readAddressesFromCSV(filePath: string): Promise<{ address: string; signature: string }[]> {
   try {
     const data = fs.readFileSync(filePath, { encoding: "utf-8" });
-    const addresses = data.split("\n").filter((line) => line.length > 0); // Assuming one address per line
-    return addresses;
+    // Split the data into lines
+    const lines = data.split("\n");
+
+    // Skip the first line (header) and process the rest
+    return lines
+      .slice(1)
+      .filter((line) => line.length > 0)
+      .map((line) => {
+        const [address, signature] = line.split(",");
+        return { address, signature };
+      });
   } catch (error) {
     console.error("Error reading file:", error);
     return [];
