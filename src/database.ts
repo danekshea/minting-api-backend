@@ -44,7 +44,7 @@ export async function totalMintCountAcrossAllPhases(prisma: PrismaClient): Promi
   }
 }
 
-async function loadAddressesIntoAllowlist(addresses: string[], phase: number, prisma: PrismaClient) {
+export async function loadAddressesIntoAllowlist(addresses: string[], phase: number, prisma: PrismaClient) {
   try {
     for (let address of addresses) {
       await prisma.allowlist.create({
@@ -74,21 +74,19 @@ export async function readAddressesFromAllowlist(phase: number, prisma: PrismaCl
   }
 }
 
-// async function main() {
-//   const prisma = new PrismaClient();
-//   const filePath = "data/addresses.txt"; // Path to the file containing Ethereum addresses
-//   const addresses = await readAddressesFromFile(filePath);
-//   if (addresses.length > 0) {
-//     await loadAddressesIntoAllowlist(addresses, 1, prisma);
-//   } else {
-//     console.log("No addresses to load.");
-//   }
-//   // try {
-//   //   const addresses = await readAddressesFromAllowlist(0);
-//   //   addresses.forEach((address) => console.log(address));
-//   // } catch (error) {
-//   //   console.error("Error reading addresses from the database:", error);
-//   // }
-// }
-
-// main();
+export async function updateUUIDStatus(uuid: string, status: string, prisma: PrismaClient): Promise<void> {
+  try {
+    await prisma.mints.updateMany({
+      where: {
+        uuid: uuid,
+      },
+      data: {
+        status: status,
+      },
+    });
+    logger.info(`Updated status for UUID ${uuid} to ${status}.`);
+  } catch (error) {
+    logger.error(`Error updating status for UUID ${uuid}: ${error}`);
+    throw error;
+  }
+}

@@ -6,7 +6,7 @@ import serverConfig, { IMX_JWT_KEY_URL } from "./config";
 import { environment } from "./config";
 import { mintByMintingAPI } from "./minting";
 import { verifyPassportToken, decodePassportToken, verifySNSSignature, readAddressesFromFile, returnActivePhase } from "./utils";
-import { addTokenMinted, checkAddressMinted, readAddressesFromAllowlist, totalMintCountAcrossAllPhases } from "./database";
+import { addTokenMinted, checkAddressMinted, readAddressesFromAllowlist, totalMintCountAcrossAllPhases, updateUUIDStatus } from "./database";
 import { PrismaClient } from "@prisma/client";
 import axios from "axios";
 import logger from "./logger";
@@ -346,6 +346,72 @@ fastify.get("/get-mint-request/:referenceId", async (request: FastifyRequest<{ P
     }
   }
 });
+
+if (serverConfig[environment].enableWebhookVerification) {
+  fastify.post("/webhook", async (request, reply) => {
+    console.log(request);
+    const { Type, SubscribeURL, TopicArn, Message, MessageId, Timestamp, Signature, SigningCertURL } = request.body;
+    logger.debug(`Received webhook: ${JSON.stringify(request.body, null, 2)}`);
+
+    if (Type === "SubscriptionConfirmation") {
+      const allowedTopicArnPrefix = serverConfig[environment].allowedTopicArn.replace("*", "");
+
+      if (TopicArn.startsWith(allowedTopicArnPrefix)) {
+        try {
+          const isValid = await verifySNSSignature(request.body);
+
+          if (isValid) {
+            const response = await axios.get(SubscribeURL);
+            if (response.status === 200) {
+              logger.info("Webhook subscription confirmed successfully");
+            } else {
+              logger.error("Failed to confirm webhook subscription");
+            }
+          } else {
+            logger.warn("Invalid signature. Subscription confirmation denied.");
+          }
+        } catch (error) {
+          logger.error(`Error confirming webhook subscription: ${JSON.stringify(error, null, 2)}`);
+        }
+      } else {
+        logger.warn("Received subscription confirmation from an unknown TopicArn:", TopicArn);
+      }
+
+      reply.send({ status: "ok" });
+    }
+
+    if (Type === "Notification") {
+      try {
+        const isValid = await verifySNSSignature(request.body);
+        if (isValid) {
+          const message = JSON.parse(Message);
+          const { event_name } = message;
+          const { reference_id, token_id, status, owner_address } = message.data;
+          if (event_name === "imtbl_zkevm_mint_request_updated") {
+            logger.info("Received mint request update notification:");
+            console.log(message);
+            if (status === "succeeded") {
+              logger.info(`Mint request ${reference_id} succeeded for owner address ${owner_address}`);
+              updateUUIDStatus(reference_id, "succeeded", prisma);
+            } else if (status === "pending") {
+              logger.debug(`Mint request ${reference_id} is pending`);
+            } else if (status === "failed") {
+              logger.warn(`Mint request ${reference_id} failed for owner address ${owner_address}`);
+              updateUUIDStatus(reference_id, "failed", prisma);
+            }
+          } else {
+            logger.warn("Received notification for an unknown event:");
+          }
+        } else {
+          logger.warn("Invalid signature. Notification denied.");
+        }
+      } catch (error) {
+        logger.error(`Error processing notification: ${JSON.stringify(error, null, 2)}`);
+      }
+      reply.send({ status: "ok" });
+    }
+  });
+}
 
 // Start the server
 const start = async () => {

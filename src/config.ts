@@ -18,6 +18,7 @@ const serverConfig: ServerConfig = {
     chainName: "imtbl-zkevm-testnet",
     collectionAddress: "0x76bedf3f6d486922d77db2e1a43cea4bf9c22ef7",
     mintRequestURL: (chainName: string, collectionAddress: string, referenceId: string) => `https://api.sandbox.immutable.com/v1/chains/${chainName}/collections/${collectionAddress}/nfts/mint-requests/${referenceId}`,
+    enableWebhookVerification: true, //Should the server verify the webhook SNS messages?
     allowedTopicArn: "arn:aws:sns:us-east-2:783421985614:*", //Used for webhook SNS verification
     metadataDir: "tokens/metadata", //Where the token metadata resides, {filename} will be replaced with the token ID
     enableFileLogging: true, //Should logs be output to files or just console?
@@ -53,6 +54,7 @@ const serverConfig: ServerConfig = {
     chainName: "imtbl-zkevm-mainnet",
     collectionAddress: "0x88b87272649b3495d99b1702f358286b19f8c3da",
     mintRequestURL: (chainName: string, collectionAddress: string, referenceId: string) => `https://api.immutable.com/v1/chains/${chainName}/collections/${collectionAddress}/nfts/mint-requests/${referenceId}`,
+    enableWebhookVerification: true, //Should the server verify the webhook SNS messages?
     allowedTopicArn: "arn:aws:sns:us-east-2:362750628221:*", //Used for webhook SNS verification
     metadataDir: "tokens/metadata", //Where the token metadata resides, {filename} will be replaced with the token ID
     enableFileLogging: true, //Should logs be output to files or just console?
