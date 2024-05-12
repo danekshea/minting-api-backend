@@ -14,7 +14,7 @@ const serverConfig: ServerConfig = {
     HUB_API_KEY: process.env.SANDBOX_HUB_IMMUTABLE_API_KEY!,
     RPS_API_KEY: process.env.SANDBOX_RPS_IMMUTABLE_API_KEY!,
     HOST_IP: "localhost",
-    PORT: 3000,
+    PORT: 3001,
     chainName: "imtbl-zkevm-testnet",
     collectionAddress: "0x76bedf3f6d486922d77db2e1a43cea4bf9c22ef7",
     mintRequestURL: (chainName: string, collectionAddress: string, referenceId: string) => `https://api.sandbox.immutable.com/v1/chains/${chainName}/collections/${collectionAddress}/nfts/mint-requests/${referenceId}`,
