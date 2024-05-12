@@ -1,10 +1,5 @@
 import { PrismaClient, Prisma } from "@prisma/client";
 import logger from "./logger";
-import serverConfig from "./config";
-import { environment } from "./config";
-import axios from "axios";
-import { ExtendedMintPhase, MintPhase } from "./types";
-import { readAddressesFromFile } from "./utils";
 
 export async function addTokenMinted(address: string, uuid: string, phase: number, status: string, prisma: PrismaClient): Promise<void> {
   try {

@@ -5,7 +5,7 @@ import { FastifyReply, FastifyRequest } from "fastify";
 import serverConfig, { IMX_JWT_KEY_URL } from "./config";
 import { environment } from "./config";
 import { mintByMintingAPI } from "./minting";
-import { verifyPassportToken, decodePassportToken, verifySNSSignature, readAddressesFromFile, returnActivePhase } from "./utils";
+import { verifyPassportToken, decodePassportToken, verifySNSSignature, returnActivePhase } from "./utils";
 import { addTokenMinted, checkAddressMinted, readAddressesFromAllowlist, totalMintCountAcrossAllPhases, updateUUIDStatus } from "./database";
 import { PrismaClient } from "@prisma/client";
 import axios from "axios";
@@ -16,7 +16,6 @@ import { ethers } from "ethers";
 import { v4 as uuidv4 } from "uuid";
 import { Prisma } from "@prisma/client";
 import { error } from "console";
-import { read } from "fs";
 
 // Initialize Prisma Client for database interactions
 const prisma = new PrismaClient();
@@ -142,7 +141,7 @@ fastify.post("/mint/passport", async (request: FastifyRequest, reply: FastifyRep
     return;
   }
 
-  if (!(totalMintCount < serverConfig[environment].maxTokenSupplyAcrossAllPhases)) {
+  if (totalMintCount >= serverConfig[environment].maxTokenSupplyAcrossAllPhases) {
     logger.warn("Total mint count has reached the limit.");
     reply.status(401).send({ error: "Total mint count has reached the limit." });
     return;
@@ -242,7 +241,7 @@ fastify.post("/mint/eoa", async (request: eoaMintRequest, reply: FastifyReply) =
     return;
   }
 
-  if (!(totalMintCount < serverConfig[environment].maxTokenSupplyAcrossAllPhases)) {
+  if (totalMintCount >= serverConfig[environment].maxTokenSupplyAcrossAllPhases) {
     logger.warn("Total mint count has reached the limit.");
     reply.status(401).send({ error: "Total mint count has reached the limit." });
     return;
