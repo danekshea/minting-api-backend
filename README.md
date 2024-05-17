@@ -34,20 +34,17 @@ The sample code provided is for reference purposes only and is not officially su
        name: "Presale",
        startTime: 1629913600,
        endTime: 1629999999,
-       maxSupply: 1000,
        enableAllowList: true,
      },
      {
        name: "Public Sale",
        startTime: 1630000000,
        endTime: 1719292800,
-       maxSupply: 9000,
        enableAllowList: false,
-       maxPerWallet: 2,
      }],
    ```
    Keep in mind that you can configure a single phase if you're not planning a phased approach but just a start/end time.
-4. Populate your metadata in `tokens/metadata` with the format of filename being {tokenid} and the metadata format following [this](https://docs.immutable.com/docs/zkEVM/products/minting/metadata/format) format. There's already examples in the folder for a project called copypasta.
+4. Populate your metadata in `server.ts` by following [this](https://docs.immutable.com/docs/zkEVM/products/minting/metadata/format) format.
 5. Run the DB migrations:
    ```
    npx prisma migrate dev
@@ -70,15 +67,10 @@ The sample code provided is for reference purposes only and is not officially su
 
 ## To-Do List
 
-- [ ] Make sure addresses are lowercased before entering DB or when coming out
-- [ ] Return a proper response for a tokenID is already minted
-- [ ] Return a proper response for not being in certain allowlist phases etc.
-- [ ] Account for getting a webhook return with a token that hasn't been entered into the mintedTokens DB but has indeed been minted
 - [ ] Consider switching to Pino instead of Winston for logging
 - [ ] Troubleshoot why all console.log are not showing up in the console with logger.info
 - [ ] Add color coding to success or failure in the logs
 - [ ] Generally type more things like the mint requests etc.
-- [ ] Consider adding batching functions. This will require ways to batch mint requests together, but also a way of checking a UUID not for a single mint but several.
 - [ ] Add ERC1155 support once the minting API is ready
 - [ ] Add the ability to choose whether you want mintByQuantity or mintByID
 
