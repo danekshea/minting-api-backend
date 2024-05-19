@@ -22,12 +22,12 @@ let allowlists: string[][] = [];
 let jwk: string;
 let totalMintCount: number;
 
+// Define the metadata for the NFT
 const metadata = {
-  name: "Paradise Pass",
+  name: "Copy Pasta - Can the devs do something?",
   description:
-    "Unlock the Gold tier in Paradise Pass with the Paradise Pass Gold NFT! Take part in daily and weekly challenges, or just hold the NFT and occasionally visit your Paradise Island to earn Moani tokens. Embark on a rewarding journey in Paradise Tycoon, both before and after the World Creation Event.",
-  image: "https://paradisetycoon.com/nft/ppass/media/paradisepass.png",
-  animation_url: "https://paradisetycoon.com/nft/ppass/media/paradisepass.mp4",
+    "ok I need PRICE TO GO UP. like VERY SOON. I cant take this anymore. every day I am checking price and it is staying the same. every day, check price, same price. I cant take this anymore, I have over invested, by a lot. it is what it is. but I need the price to GO UP ALREADY. can devs DO SOMETHING??",
+  image: "https://emerald-variable-swallow-254.mypinata.cloud/ipfs/QmNYn1DS9djwCLCcu7Pyrb6uUtGzf29AH6cBcXAncELeik/1.png",
   attributes: [],
 };
 
