@@ -6,6 +6,7 @@ export interface MintPhase {
   name: string;
   startTime: number;
   endTime: number;
+  allowList: boolean;
 }
 
 export interface ExtendedMintPhase extends MintPhase {
@@ -66,7 +67,6 @@ export interface NFTMetadata {
   name: string;
   description: string;
   image: string;
-  animation_url: string;
   attributes: Attribute[];
 }
 

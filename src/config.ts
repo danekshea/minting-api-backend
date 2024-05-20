@@ -3,7 +3,7 @@ import { ServerConfig } from "./types";
 require("dotenv").config();
 
 //config.Environment.SANDBOX or config.Environment.PRODUCTION
-export const environment = config.Environment.SANDBOX;
+export const environment = config.Environment.PRODUCTION;
 
 //Used for verification of the Passport JWTs
 export const IMX_JWT_KEY_URL = "https://auth.immutable.com/.well-known/jwks.json?_gl=1*1g7a0qs*_ga*NDg1NTg3MDI3LjE2ODU1OTY1Mzg.*_ga_4JBHZ7F06X*MTY4ODUyNjkyNy4xNC4wLjE2ODg1MjY5MjcuMC4wLjA.*_ga_7XM4Y7T8YC*MTY4ODUyNjkyNy4yNy4wLjE2ODg1MjY5MjcuMC4wLjA.";
@@ -30,18 +30,26 @@ const serverConfig: ServerConfig = {
         name: "Guaranteed",
         startTime: 1629913600,
         endTime: 1714916592,
+        allowList: true,
       },
       {
         name: "Waitlist",
         startTime: 1714916593,
-        endTime: 1719292800,
+        endTime: 1716043491,
+        allowList: true,
+      },
+      {
+        name: "Public",
+        startTime: 1716043492,
+        endTime: 1905345891,
+        allowList: false,
       },
     ],
     metadata: {
-      name: "Paradise Pass",
-      description: "Unlock the Gold tier in Paradise Pass with the Paradise Pass Gold NFT! Embark on a rewarding journey in Paradise Tycoon.",
-      image: "https://paradisetycoon.com/nft/ppass/media/paradisepass.png",
-      animation_url: "https://paradisetycoon.com/nft/ppass/media/paradisepass.mp4",
+      name: "Copy Pasta - Can the devs do something?",
+      description:
+        "ok I need PRICE TO GO UP. like VERY SOON. I cant take this anymore. every day I am checking price and it is staying the same. every day, check price, same price. I cant take this anymore, I have over invested, by a lot. it is what it is. but I need the price to GO UP ALREADY. can devs DO SOMETHING??",
+      image: "https://emerald-variable-swallow-254.mypinata.cloud/ipfs/QmNYn1DS9djwCLCcu7Pyrb6uUtGzf29AH6cBcXAncELeik/1.png",
       attributes: [],
     },
   },
@@ -52,7 +60,7 @@ const serverConfig: ServerConfig = {
     HOST_IP: "localhost",
     PORT: 3000,
     chainName: "imtbl-zkevm-mainnet",
-    collectionAddress: "0x88b87272649b3495d99b1702f358286b19f8c3da",
+    collectionAddress: "0x5443ecda5866ce15fa2f61a270f67e73b591438c",
     mintRequestURL: (chainName: string, collectionAddress: string, referenceId: string) => `https://api.immutable.com/v1/chains/${chainName}/collections/${collectionAddress}/nfts/mint-requests/${referenceId}`,
     enableWebhookVerification: true, //Should the server verify the webhook SNS messages?
     allowedTopicArn: "arn:aws:sns:us-east-2:362750628221:*", //Used for webhook SNS verification
@@ -65,19 +73,27 @@ const serverConfig: ServerConfig = {
       {
         name: "Guaranteed",
         startTime: 1629913600,
-        endTime: 1714623711,
+        endTime: 1714916592,
+        allowList: true,
       },
       {
         name: "Waitlist",
-        startTime: 1714623712,
-        endTime: 1719292800,
+        startTime: 1714916593,
+        endTime: 1716043491,
+        allowList: true,
+      },
+      {
+        name: "Public",
+        startTime: 1716043492,
+        endTime: 1905345891,
+        allowList: false,
       },
     ],
     metadata: {
-      name: "Paradise Pass",
-      description: "Unlock the Gold tier in Paradise Pass with the Paradise Pass Gold NFT! Embark on a rewarding journey in Paradise Tycoon.",
-      image: "https://paradisetycoon.com/nft/ppass/media/paradisepass.png",
-      animation_url: "https://paradisetycoon.com/nft/ppass/media/paradisepass.mp4",
+      name: "Copy Pasta - Can the devs do something?",
+      description:
+        "ok I need PRICE TO GO UP. like VERY SOON. I cant take this anymore. every day I am checking price and it is staying the same. every day, check price, same price. I cant take this anymore, I have over invested, by a lot. it is what it is. but I need the price to GO UP ALREADY. can devs DO SOMETHING??",
+      image: "https://emerald-variable-swallow-254.mypinata.cloud/ipfs/QmNYn1DS9djwCLCcu7Pyrb6uUtGzf29AH6cBcXAncELeik/1.png",
       attributes: [],
     },
   },

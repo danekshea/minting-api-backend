@@ -23,13 +23,7 @@ let jwk: string;
 let totalMintCount: number;
 
 // Define the metadata for the NFT
-const metadata = {
-  name: "Copy Pasta - Can the devs do something?",
-  description:
-    "ok I need PRICE TO GO UP. like VERY SOON. I cant take this anymore. every day I am checking price and it is staying the same. every day, check price, same price. I cant take this anymore, I have over invested, by a lot. it is what it is. but I need the price to GO UP ALREADY. can devs DO SOMETHING??",
-  image: "https://emerald-variable-swallow-254.mypinata.cloud/ipfs/QmNYn1DS9djwCLCcu7Pyrb6uUtGzf29AH6cBcXAncELeik/1.png",
-  attributes: [],
-};
+const metadata = serverConfig[environment].metadata;
 
 // Enable CORS with specified options for API security and flexibility
 fastify.register(cors, {
@@ -160,19 +154,21 @@ fastify.post("/mint/passport", async (request: FastifyRequest, reply: FastifyRep
     return;
   }
 
-  // Check if the wallet address is on the allowlist for the given phase
-  try {
-    if (allowlists[activePhase].includes(walletAddress)) {
-      logger.info(`Wallet address ${walletAddress} is on the allowlist for phase ${activePhase}.`);
-    } else {
-      logger.warn(`Wallet address ${walletAddress} is not on the allowlist for phase ${activePhase}.`);
-      reply.status(401).send({ error: "Wallet address is not on the allowlist." });
+  // If allowlist is enabled for a given phase, check if the wallet address is on the allowlist for the given phase
+  if (serverConfig[environment].mintPhases[activePhase].allowList) {
+    try {
+      if (allowlists[activePhase].includes(walletAddress)) {
+        logger.info(`Wallet address ${walletAddress} is on the allowlist for phase ${activePhase}.`);
+      } else {
+        logger.warn(`Wallet address ${walletAddress} is not on the allowlist for phase ${activePhase}.`);
+        reply.status(401).send({ error: "Wallet address is not on the allowlist." });
+        return;
+      }
+    } catch (error) {
+      logger.error(`Error checking allowlist: ${error}`);
+      reply.status(500).send({ error: "Failed to check allowlist." });
       return;
     }
-  } catch (error) {
-    logger.error(`Error checking allowlist: ${error}`);
-    reply.status(500).send({ error: "Failed to check allowlist." });
-    return;
   }
 
   // Perform the minting process within a transaction
@@ -268,19 +264,21 @@ fastify.post("/mint/eoa", async (request: eoaMintRequest, reply: FastifyReply) =
     return;
   }
 
-  // Check if the wallet address is on the allowlist for the given phase
-  try {
-    if (allowlists[activePhase].includes(walletAddress)) {
-      logger.info(`Wallet address ${walletAddress} is on the allowlist for phase ${activePhase}.`);
-    } else {
-      logger.warn(`Wallet address ${walletAddress} is not on the allowlist for phase ${activePhase}.`);
-      reply.status(401).send({ error: "Wallet address is not on the allowlist." });
+  // If allowlist is enabled for a given phase, check if the wallet address is on the allowlist for the given phase
+  if (serverConfig[environment].mintPhases[activePhase].allowList) {
+    try {
+      if (allowlists[activePhase].includes(walletAddress)) {
+        logger.info(`Wallet address ${walletAddress} is on the allowlist for phase ${activePhase}.`);
+      } else {
+        logger.warn(`Wallet address ${walletAddress} is not on the allowlist for phase ${activePhase}.`);
+        reply.status(401).send({ error: "Wallet address is not on the allowlist." });
+        return;
+      }
+    } catch (error) {
+      logger.error(`Error checking allowlist: ${error}`);
+      reply.status(500).send({ error: "Failed to check allowlist." });
       return;
     }
-  } catch (error) {
-    logger.error(`Error checking allowlist: ${error}`);
-    reply.status(500).send({ error: "Failed to check allowlist." });
-    return;
   }
 
   // Perform the minting process within a transaction
