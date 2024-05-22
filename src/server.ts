@@ -213,8 +213,13 @@ fastify.post("/mint/passport", async (request: FastifyRequest, reply: FastifyRep
 
 // Define POST endpoint for minting tokens
 fastify.post("/mint/eoa", async (request: eoaMintRequest, reply: FastifyReply) => {
-  const { signature } = request.body;
   const message = serverConfig[environment].eoaMintMessage;
+  const { signature } = request.body;
+
+  // Guard against signature being undefined
+  if (!signature) {
+    return reply.status(400).send({ error: "Signature is required" });
+  }
 
   // Attempt to recover wallet address from the signature
   let recoveredWalletAddress: `0x${string}`;
