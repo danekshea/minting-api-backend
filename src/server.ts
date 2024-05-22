@@ -214,7 +214,7 @@ fastify.post("/mint/passport", async (request: FastifyRequest, reply: FastifyRep
 // Define POST endpoint for minting tokens
 fastify.post("/mint/eoa", async (request: eoaMintRequest, reply: FastifyReply) => {
   const message = serverConfig[environment].eoaMintMessage;
-  const { signature } = request.body;
+  const { signature } = request.body || {};
 
   // Guard against signature being undefined
   if (!signature) {
