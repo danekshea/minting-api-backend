@@ -46,6 +46,7 @@ fastify.get("/config", async (request: FastifyRequest, reply: FastifyReply) => {
           name: phase.name,
           startTime: phase.startTime,
           endTime: phase.endTime,
+          allowList: phase.allowList,
         };
 
         return phaseConfig;
@@ -445,7 +446,11 @@ const start = async () => {
       logger.info(`Addresses on phase ${index}: ${allowlist.length}`);
     });
 
-    await fastify.listen(serverConfig[environment].PORT, serverConfig[environment].HOST_IP);
+    await fastify.listen({
+      port: serverConfig[environment].PORT,
+      host: serverConfig[environment].HOST_IP,
+    });
+
     logger.info(`Server started successfully on port ${serverConfig[environment].PORT}.`);
 
     if (returnActivePhase() === null) {
