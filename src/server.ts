@@ -82,7 +82,7 @@ fastify.get("/eligibility/:address", async (request: FastifyRequest<{ Params: { 
     const phaseEligibility = await Promise.all(
       serverConfig[environment].mintPhases.map(async (phase, index) => {
         const isActive = currentTime >= phase.startTime && currentTime <= phase.endTime;
-        const isAllowListed = allowlists[index].includes(address);
+        const isAllowListed = !phase.allowList || allowlists[index].includes(address);
 
         return {
           name: phase.name,
