@@ -19,12 +19,11 @@ interface EnvironmentConfig {
   RPS_API_KEY: string;
   HOST_IP: string;
   PORT: number;
-  chainName: string;
   collectionAddress: string;
+  chainName: string;
   mintRequestURL: (chainName: string, collectionAddress: string, referenceId: string) => string;
   enableWebhookVerification: boolean;
   allowedTopicArn: string;
-  metadataDir: string;
   maxTokenSupplyAcrossAllPhases: number; // Optional for generalization
   enableFileLogging: boolean;
   logLevel: string;

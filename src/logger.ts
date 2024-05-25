@@ -19,6 +19,7 @@ const transportsArray: transport[] = [
 ];
 
 //If logging to file is enabled in config.ts, let's output to file, we also want to use a file per day, datePattern dictates the frequency
+console.log(`Environment: ${environment}`);
 if (serverConfig[environment].enableFileLogging) {
   transportsArray.push(
     new DailyRotateFile({
