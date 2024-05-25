@@ -66,7 +66,7 @@ const serverConfig: ServerConfig = {
     maxTokenSupplyAcrossAllPhases: 1500,
     enableFileLogging: true, //Should logs be output to files or just console?
     logLevel: "debug",
-    eoaMintMessage: "Sign this message to verify your wallet address1", //The message an EOA signs to verify their wallet address and mint
+    eoaMintMessage: "Sign this message to verify your wallet address", //The message an EOA signs to verify their wallet address and mint
     mintPhases: [
       {
         name: "Guaranteed",
