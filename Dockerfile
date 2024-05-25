@@ -21,13 +21,6 @@ RUN npx prisma generate
 RUN echo "Building TypeScript code..."
 RUN npm run build
 
-# List the contents of the dist directory
-RUN echo "Listing dist directory contents..."
-RUN ls -al dist
-
-# Ensure the necessary permissions
-RUN chown -R node:node /usr/src/app
-
 # Expose the port that the app runs on.
 EXPOSE 3000
 
