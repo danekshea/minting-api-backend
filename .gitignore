@@ -4,3 +4,4 @@
 prisma/allowList.db
 prisma/allowList.db-journal
 /logs
+/dist

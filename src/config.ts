@@ -3,7 +3,7 @@ import { ServerConfig } from "./types";
 require("dotenv").config();
 
 //config.Environment.SANDBOX or config.Environment.PRODUCTION
-export const environment = config.Environment.PRODUCTION;
+export const environment = config.Environment.SANDBOX;
 
 //Used for verification of the Passport JWTs
 export const IMX_JWT_KEY_URL = "https://auth.immutable.com/.well-known/jwks.json?_gl=1*1g7a0qs*_ga*NDg1NTg3MDI3LjE2ODU1OTY1Mzg.*_ga_4JBHZ7F06X*MTY4ODUyNjkyNy4xNC4wLjE2ODg1MjY5MjcuMC4wLjA.*_ga_7XM4Y7T8YC*MTY4ODUyNjkyNy4yNy4wLjE2ODg1MjY5MjcuMC4wLjA.";
@@ -13,8 +13,8 @@ const serverConfig: ServerConfig = {
     API_URL: "https://api.sandbox.immutable.com",
     HUB_API_KEY: process.env.SANDBOX_HUB_IMMUTABLE_API_KEY!,
     RPS_API_KEY: process.env.SANDBOX_RPS_IMMUTABLE_API_KEY!,
-    HOST_IP: "localhost",
-    PORT: 3001,
+    HOST_IP: "0.0.0.0",
+    PORT: 3000,
     chainName: "imtbl-zkevm-testnet",
     collectionAddress: "0x76bedf3f6d486922d77db2e1a43cea4bf9c22ef7",
     mintRequestURL: (chainName: string, collectionAddress: string, referenceId: string) => `https://api.sandbox.immutable.com/v1/chains/${chainName}/collections/${collectionAddress}/nfts/mint-requests/${referenceId}`,

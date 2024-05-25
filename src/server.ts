@@ -352,7 +352,7 @@ fastify.get("/get-mint-request/:referenceId", async (request: FastifyRequest<{ P
 });
 
 if (serverConfig[environment].enableWebhookVerification) {
-  fastify.post("/webhook", async (request, reply) => {
+  fastify.post("/webhook", async (request: any, reply: any) => {
     console.log(request);
     const { Type, SubscribeURL, TopicArn, Message, MessageId, Timestamp, Signature, SigningCertURL } = request.body;
     logger.debug(`Received webhook: ${JSON.stringify(request.body, null, 2)}`);
@@ -445,6 +445,8 @@ const start = async () => {
     allowlists.forEach((allowlist, index) => {
       logger.info(`Addresses on phase ${index}: ${allowlist.length}`);
     });
+
+    logger.info(`Attempting to start on IP ${serverConfig[environment].HOST_IP} and port ${serverConfig[environment].PORT}...`);
 
     await fastify.listen({
       port: serverConfig[environment].PORT,
