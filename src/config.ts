@@ -3,7 +3,7 @@ import { ServerConfig } from "./types";
 require("dotenv").config();
 
 //config.Environment.SANDBOX or config.Environment.PRODUCTION
-export const environment = config.Environment.SANDBOX;
+export const environment = config.Environment.PRODUCTION;
 
 //Used for verification of the Passport JWTs
 export const IMX_JWT_KEY_URL = "https://auth.immutable.com/.well-known/jwks.json?_gl=1*1g7a0qs*_ga*NDg1NTg3MDI3LjE2ODU1OTY1Mzg.*_ga_4JBHZ7F06X*MTY4ODUyNjkyNy4xNC4wLjE2ODg1MjY5MjcuMC4wLjA.*_ga_7XM4Y7T8YC*MTY4ODUyNjkyNy4yNy4wLjE2ODg1MjY5MjcuMC4wLjA.";
