@@ -17,6 +17,26 @@ The sample code provided is for reference purposes only and is not officially su
 - Rich logging using Winston for troubleshooting & debugging.
 - Define phases that the mint should occur in, with different max supplies, start times, end times, and whether the phase is allowlisted.
 
+## Setup Instructions with Docker(recommended)
+
+1. Clone the repository:
+   ```
+   git clone <repository_url>
+   cd <repository_directory>
+   ```
+2. Install the dependencies:
+   ```
+   npm i
+   ```
+3. Copy the example environment file and fill it with your configuration details, and DB path(should be `file:./allowList.db`):
+   ```
+   cp .env.example .env
+   ```
+4. Start the docker container in detached mode, this will start the Fastify server, the docker compose is structure such that the `.env` file and the `allowList.db` file are mounted into the container:
+   ```
+   docker compose up -d
+   ```
+
 ## Setup Instructions
 
 1. Install the dependencies:
