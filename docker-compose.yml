@@ -1,12 +1,13 @@
 services:
   app:
     build: .
-    image: mint
+    image: minting-api-backend
     restart: unless-stopped
     ports:
       - "3000:3000"
     volumes:
       - prisma-db:/usr/src/app/prisma/
+      - ./.env:/usr/src/app/.env
     environment:
       NODE_ENV: development
 
